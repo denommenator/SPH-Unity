@@ -44,13 +44,13 @@ float3 getAcceleration(uint p_id)
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
 		float3 q = _Positions[q_id];
-		accel_p += - (_Pressures[p_id] / pow(_Densities[p_id], 2) +
+		accel_p += - 1/1000.0f * (_Pressures[p_id] / pow(_Densities[p_id], 2) +
 						_Pressures[q_id] / pow(_Densities[q_id], 2)
 					 ) * W_gradient_q(q, p);
 							
 		
 	}
-	return 0.0005 * accel_p;
+	return accel_p;
 
 }
 
@@ -90,7 +90,7 @@ void ComputeDensity(uint p_id : SV_DispatchThreadID)
 void ComputePressure(uint p_id : SV_DispatchThreadID)
 {
 	//speed of sound
-	float c = 100;
+	float c = 15;
 
 	//reference density
 	float density_neutral = 1000;

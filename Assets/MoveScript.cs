@@ -4,8 +4,7 @@ using UnityEngine;
 
 public class MoveScript : MonoBehaviour
 {
-    [SerializeField, Range(2, 1_000)]
-    public int nBodies = 10;
+    
 
     ComputeBuffer positionBuffer, nextPositionBuffer;
     ComputeBuffer velocityBuffer, nextVelocityBuffer;
@@ -14,7 +13,10 @@ public class MoveScript : MonoBehaviour
     ComputeBuffer densityBuffer, pressureBuffer;
 
     [SerializeField, Range(0, 1_000)]
-    public float spiralScale = 1;
+    public float spiralScale = 10;
+
+    //[SerializeField, Range(2, 1_000)]
+    private int nBodies;
 
     [SerializeField]
     Material material;
@@ -50,6 +52,8 @@ public class MoveScript : MonoBehaviour
 
     void OnEnable()
     {
+        nBodies = Mathf.FloorToInt(0.05f * Mathf.PI * Mathf.Pow(spiralScale, 2));
+
         containerSize = spiralScale * Mathf.Sqrt(nBodies);
 
         densityBuffer = new ComputeBuffer(nBodies, sizeof(float));
