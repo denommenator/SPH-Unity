@@ -1,0 +1,120 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel Main
+#pragma kernel ComputeDensity
+#pragma kernel ComputePressure
+#pragma kernel CopyBuffers
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+//RWTexture2D<float4> Result;
+
+static float PI = 3.14159265358979323846;
+
+RWStructuredBuffer<float3> _Positions, _NextPositions;
+RWStructuredBuffer<float3> _Velocities, _NextVelocities;
+RWStructuredBuffer<float3> _Accelerations, _NextAccelerations;
+
+RWStructuredBuffer<float> _Densities, _Pressures;
+
+float _Step, _DeltaTime;
+
+
+uint _nBodies;
+
+float F_prime(float d)
+{
+	return 0.5f;
+}
+
+float W(float d)
+{
+	return 1 / PI * exp(- pow(d, 2));
+}
+
+float3 W_gradient_q(float3 q, float3 p)
+{
+	return -2.0f * W(distance(q, p)) * (q - p);
+}
+
+float3 getAcceleration(uint p_id)
+{
+	float3 p = _Positions[p_id];
+	float3 accel_p = {0.0f, 0.0f, 0.0f};
+
+	for(uint q_id = 0; q_id < _nBodies; q_id++)
+	{
+		float3 q = _Positions[q_id];
+		accel_p += - (_Pressures[p_id] / pow(_Densities[p_id], 2) +
+						_Pressures[q_id] / pow(_Densities[q_id], 2)
+					 ) * W_gradient_q(q, p);
+							
+		
+	}
+	return 0.0005 * accel_p;
+
+}
+
+
+[numthreads(1,1,1)]
+void Main(uint id : SV_DispatchThreadID)
+{
+	float dt = _DeltaTime;
+	if (id >= _nBodies)
+        return;
+
+	float3 accel_id = getAcceleration(id);
+	_NextPositions[id] = _Positions[id] + dt * _Velocities[id];
+	_NextVelocities[id] = _Velocities[id] + dt * accel_id;
+
+	
+}
+
+
+
+[numthreads(1,1,1)]
+void ComputeDensity(uint p_id : SV_DispatchThreadID)
+{
+	float3 p = _Positions[p_id];
+	float density_p = 0.0f;
+
+	for(uint q_id = 0; q_id < _nBodies; q_id++)
+	{
+		float3 q = _Positions[q_id];
+		density_p += W(distance(p, q));
+	}
+
+	_Densities[p_id] = density_p;
+}
+
+[numthreads(1,1,1)]
+void ComputePressure(uint p_id : SV_DispatchThreadID)
+{
+	//speed of sound
+	float c = 100;
+
+	//reference density
+	float density_neutral = 1000;
+
+	//heat capacity ratio
+	float gamma = 7;
+
+	float density = _Densities[p_id];
+
+	//Cole equation of state for water at sea level
+	_Pressures[p_id] = density_neutral * pow(c, 2) * (pow(abs(density) / density_neutral, gamma) - 1);
+
+}
+
+[numthreads(1,1,1)]
+void CopyBuffers(uint id : SV_DispatchThreadID)
+{
+
+	 _Positions[id] = _NextPositions[id];
+	 _Velocities[id] = _NextVelocities[id];
+
+
+}
+
+
+
+
