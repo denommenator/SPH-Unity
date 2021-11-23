@@ -52,6 +52,9 @@ float3 getAcceleration(uint p_id)
 	}
 	return accel_p;
 
+	//float3 zero = {0.0f, 0.0f, 0.0f};
+	//return zero;
+
 }
 
 

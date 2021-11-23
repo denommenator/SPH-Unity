@@ -129,9 +129,7 @@ public class MoveScript : MonoBehaviour
 
 
     
-
-    // Update is called once per frame
-    void Update()
+    void FixedUpdate()
     {
         moveShader.SetInt(nBodiesID, nBodies);
 
@@ -146,7 +144,7 @@ public class MoveScript : MonoBehaviour
         moveShader.Dispatch(moveShader.FindKernel("ComputePressure"), nBodies, 1, 1);
 
 
-        moveShader.SetFloat(deltaTimeID, Time.deltaTime);
+        moveShader.SetFloat(deltaTimeID, Time.fixedDeltaTime);
 
 
         moveShader.SetBuffer(moveShader.FindKernel("Main"), densitiesID, densityBuffer);
@@ -176,6 +174,11 @@ public class MoveScript : MonoBehaviour
 
 
 
+        
+    }
+
+    void Update()
+    {
         material.SetBuffer(positionsID, positionBuffer);
 
         Bounds bounds = new Bounds(Vector3.zero, Vector3.one * containerSize);
