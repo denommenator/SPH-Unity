@@ -328,8 +328,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 68e97ea43684c4a359b58e9e2caa2533, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spiralScale: 30
-  fixedPointIterations: 10
+  spiralScale: 10
+  fixedPointIterations: 40
   material: {fileID: 2100000, guid: ba134cbe9ad00456080a61beff492244, type: 2}
   mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   moveShader: {fileID: 7200000, guid: 48f77a915fb6f436b9f2488f7e3a7f5b, type: 3}

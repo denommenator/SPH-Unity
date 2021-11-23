@@ -109,19 +109,23 @@ void ComputeDensity(uint p_id : SV_DispatchThreadID)
 void ComputePressure(uint p_id : SV_DispatchThreadID)
 {
 	//speed of sound
-	float c = 315;
+	float c = 350.0f;
 
 	//reference density
-	float density_neutral = 1000;
+	float density_neutral = 1000.0f;
 
 	//heat capacity ratio
-	float gamma = 7;
+	float gamma = 3.0f;
 
 	float density = _Densities[p_id];
 
+	//pressure at sea level
+	float spuriousAttractionForce = 121000000.0f;
+
 	//Cole equation of state for water at sea level
 
-	_Pressures[p_id] = density_neutral * pow(c, 2) * (pow(abs(density) / density_neutral, gamma) - 1);
+	_Pressures[p_id] = density_neutral * pow(c, 2) * (pow(abs(density) / density_neutral, gamma) - 1) + spuriousAttractionForce;
+
 
 }
 

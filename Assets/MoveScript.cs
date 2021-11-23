@@ -60,7 +60,7 @@ public class MoveScript : MonoBehaviour
 
     void OnEnable()
     {
-        nBodies = Mathf.FloorToInt(0.05f * Mathf.PI * Mathf.Pow(spiralScale, 2));
+        nBodies = Mathf.FloorToInt(1.0f * Mathf.PI * Mathf.Pow(spiralScale, 2));
 
         containerSize = spiralScale * Mathf.Sqrt(nBodies);
 
