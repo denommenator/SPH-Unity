@@ -10,6 +10,8 @@ public class MoveScript : MonoBehaviour
     ComputeBuffer velocityBuffer, nextVelocityBuffer;
     ComputeBuffer accelerationBuffer, nextAccelerationBuffer;
 
+    ComputeBuffer fixedPointIterationPositionBuffer, fixedPointIterationVelocityBuffer;
+
     ComputeBuffer densityBuffer, pressureBuffer;
 
     [SerializeField, Range(0, 1_000)]
@@ -17,6 +19,9 @@ public class MoveScript : MonoBehaviour
 
     //[SerializeField, Range(2, 1_000)]
     private int nBodies;
+
+    [SerializeField, Range(1, 40)]
+    private uint fixedPointIterations = 1;
 
     [SerializeField]
     Material material;
@@ -35,8 +40,11 @@ public class MoveScript : MonoBehaviour
     static readonly int velocitiesID = Shader.PropertyToID("_Velocities");
     static readonly int nextVelocitiesID = Shader.PropertyToID("_NextVelocities");
 
-    static readonly int accelerationsID = Shader.PropertyToID("_Accelerations");
-    static readonly int nextAccelerationsID = Shader.PropertyToID("_NextAccelerations");
+    static readonly int copyBufferOriginID = Shader.PropertyToID("_CopyBufferOrigin");
+    static readonly int copyBufferDestinationID = Shader.PropertyToID("_CopyBufferDestination");
+
+    static readonly int fixedPointIterationsPositionsID = Shader.PropertyToID("_FixedPointIterationPositions");
+    static readonly int fixedPointIterationsVelocitiesID = Shader.PropertyToID("_FixedPointIterationVelocities");
 
     static readonly int densitiesID = Shader.PropertyToID("_Densities");
     static readonly int pressuresID = Shader.PropertyToID("_Pressures");
@@ -62,6 +70,9 @@ public class MoveScript : MonoBehaviour
         positionBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
         nextPositionBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
 
+        fixedPointIterationPositionBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
+        fixedPointIterationVelocityBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
+
         Vector3[] initialPositions = new Vector3[nBodies];
 
         for (int id = 0; id < nBodies; id++)
@@ -75,16 +86,11 @@ public class MoveScript : MonoBehaviour
         velocityBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
         nextVelocityBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
 
-        Vector3[] init_velocity = new Vector3[nBodies];
+        Vector3[] zero_vectors = new Vector3[nBodies];
         for (int i = 0; i < nBodies; i++)
-            init_velocity[i] = Vector3.zero;
+            zero_vectors[i] = Vector3.zero;
 
-        velocityBuffer.SetData(init_velocity);
-
-        accelerationBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
-        nextAccelerationBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
-
-        accelerationBuffer.SetData(init_velocity);
+        velocityBuffer.SetData(zero_vectors);
 
     }
 
@@ -96,8 +102,8 @@ public class MoveScript : MonoBehaviour
         velocityBuffer.Release();
         nextVelocityBuffer.Release();
 
-        accelerationBuffer.Release();
-        nextAccelerationBuffer.Release();
+        fixedPointIterationPositionBuffer.Release();
+        fixedPointIterationVelocityBuffer.Release();
 
         densityBuffer.Release();
         pressureBuffer.Release();
@@ -133,44 +139,79 @@ public class MoveScript : MonoBehaviour
     {
         moveShader.SetInt(nBodiesID, nBodies);
 
-        moveShader.SetBuffer(moveShader.FindKernel("ComputeDensity"), positionsID, positionBuffer);
-        moveShader.SetBuffer(moveShader.FindKernel("ComputeDensity"), densitiesID, densityBuffer);
-
-        moveShader.Dispatch(moveShader.FindKernel("ComputeDensity"), nBodies, 1, 1);
-
-        moveShader.SetBuffer(moveShader.FindKernel("ComputePressure"), densitiesID, densityBuffer);
-        moveShader.SetBuffer(moveShader.FindKernel("ComputePressure"), pressuresID, pressureBuffer);
-
-        moveShader.Dispatch(moveShader.FindKernel("ComputePressure"), nBodies, 1, 1);
+        
 
 
-        moveShader.SetFloat(deltaTimeID, Time.fixedDeltaTime);
+        
 
-
-        moveShader.SetBuffer(moveShader.FindKernel("Main"), densitiesID, densityBuffer);
-        moveShader.SetBuffer(moveShader.FindKernel("Main"), pressuresID, pressureBuffer);
-
-        moveShader.SetBuffer(moveShader.FindKernel("Main"), positionsID, positionBuffer);
-        moveShader.SetBuffer(moveShader.FindKernel("Main"), nextPositionsID, nextPositionBuffer);
-
-
-        moveShader.SetBuffer(moveShader.FindKernel("Main"), velocitiesID, velocityBuffer);
-        moveShader.SetBuffer(moveShader.FindKernel("Main"), nextVelocitiesID, nextVelocityBuffer);
-
-        moveShader.SetBuffer(moveShader.FindKernel("Main"), accelerationsID, accelerationBuffer);
-        moveShader.SetBuffer(moveShader.FindKernel("Main"), nextAccelerationsID, nextAccelerationBuffer);
-
-
-        moveShader.Dispatch(moveShader.FindKernel("Main"), nBodies, 1, 1);
-
-        //copy data from next to current
-        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), positionsID, positionBuffer);
-        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), nextPositionsID, nextPositionBuffer);
-                                                        
-        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), velocitiesID, velocityBuffer);
-        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), nextVelocitiesID, nextVelocityBuffer);
+        //start fixed-point iteration loop for backwards euler to compute q^(i+1), q_dot^(i+1)
+        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, positionBuffer);
+        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, fixedPointIterationPositionBuffer);
 
         moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+
+        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, velocityBuffer);
+        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, fixedPointIterationVelocityBuffer);
+
+        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+
+        for (int i = 0; i < fixedPointIterations; i++)
+        {
+            //first, update density and pressure fields
+            moveShader.SetBuffer(moveShader.FindKernel("ComputeDensity"), fixedPointIterationsPositionsID, fixedPointIterationPositionBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("ComputeDensity"), densitiesID, densityBuffer);
+
+            moveShader.Dispatch(moveShader.FindKernel("ComputeDensity"), nBodies, 1, 1);
+
+            moveShader.SetBuffer(moveShader.FindKernel("ComputePressure"), densitiesID, densityBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("ComputePressure"), pressuresID, pressureBuffer);
+
+            moveShader.Dispatch(moveShader.FindKernel("ComputePressure"), nBodies, 1, 1);
+
+            //compute next fixed point iteration
+            moveShader.SetFloat(deltaTimeID, Time.fixedDeltaTime / fixedPointIterations);
+
+
+            moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), densitiesID, densityBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), pressuresID, pressureBuffer);
+
+            moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), positionsID, positionBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), nextPositionsID, nextPositionBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), fixedPointIterationsPositionsID, fixedPointIterationPositionBuffer);
+
+
+            moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), velocitiesID, velocityBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), nextVelocitiesID, nextVelocityBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), fixedPointIterationsVelocitiesID, fixedPointIterationVelocityBuffer);
+
+            moveShader.Dispatch(moveShader.FindKernel("FixedPointIteration"), nBodies, 1, 1);
+
+            //update i->i+1 in the fixed point position/velocity buffers
+            moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, nextPositionBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, fixedPointIterationPositionBuffer);
+
+            moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+
+            moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, nextVelocityBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, fixedPointIterationVelocityBuffer);
+
+            moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+        }
+
+
+        //copy data from next position/velocity to current position/velocity
+        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, nextPositionBuffer);
+        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, positionBuffer);
+
+        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+
+        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, nextVelocityBuffer);
+        moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, velocityBuffer);
+
+        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+
+
+        
 
 
 

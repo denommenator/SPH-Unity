@@ -1,5 +1,6 @@
 // Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel Main
+//#pragma kernel Main
+#pragma kernel FixedPointIteration
 #pragma kernel ComputeDensity
 #pragma kernel ComputePressure
 #pragma kernel CopyBuffers
@@ -12,7 +13,10 @@ static float PI = 3.14159265358979323846;
 
 RWStructuredBuffer<float3> _Positions, _NextPositions;
 RWStructuredBuffer<float3> _Velocities, _NextVelocities;
-RWStructuredBuffer<float3> _Accelerations, _NextAccelerations;
+
+RWStructuredBuffer<float3> _FixedPointIterationPositions, _FixedPointIterationVelocities;
+
+RWStructuredBuffer<float3> _CopyBufferOrigin, _CopyBufferDestination;
 
 RWStructuredBuffer<float> _Densities, _Pressures;
 
@@ -36,19 +40,17 @@ float3 W_gradient_q(float3 q, float3 p)
 	return -2.0f * W(distance(q, p)) * (q - p);
 }
 
-float3 getAcceleration(uint p_id)
+float3 getAccelerationIteration(uint p_id)
 {
-	float3 p = _Positions[p_id];
+	float3 p = _FixedPointIterationPositions[p_id];
 	float3 accel_p = {0.0f, 0.0f, 0.0f};
 
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
-		float3 q = _Positions[q_id];
+		float3 q = _FixedPointIterationPositions[q_id];
 		accel_p += - 1/1000.0f * (_Pressures[p_id] / pow(_Densities[p_id], 2) +
 						_Pressures[q_id] / pow(_Densities[q_id], 2)
 					 ) * W_gradient_q(q, p);
-							
-		
 	}
 	return accel_p;
 
@@ -58,31 +60,45 @@ float3 getAcceleration(uint p_id)
 }
 
 
+//[numthreads(1,1,1)]
+//void Main(uint id : SV_DispatchThreadID)
+//{
+//	float dt = _DeltaTime;
+//	if (id >= _nBodies)
+//        return;
+//
+//	float3 accel_id = getAcceleration(id);
+//	_NextPositions[id] = _Positions[id] + dt * _Velocities[id];
+//	_NextVelocities[id] = _Velocities[id] + dt * accel_id;
+//
+//	
+//}
+
+
 [numthreads(1,1,1)]
-void Main(uint id : SV_DispatchThreadID)
+void FixedPointIteration(uint id : SV_DispatchThreadID)
 {
 	float dt = _DeltaTime;
 	if (id >= _nBodies)
         return;
 
-	float3 accel_id = getAcceleration(id);
-	_NextPositions[id] = _Positions[id] + dt * _Velocities[id];
-	_NextVelocities[id] = _Velocities[id] + dt * accel_id;
+	float3 accel_p_id = getAccelerationIteration(id);
+	_NextPositions[id] = _Positions[id] + dt * _FixedPointIterationVelocities[id];
+	_NextVelocities[id] = _Velocities[id] + dt * accel_p_id;
 
 	
 }
 
 
-
 [numthreads(1,1,1)]
 void ComputeDensity(uint p_id : SV_DispatchThreadID)
 {
-	float3 p = _Positions[p_id];
+	float3 p = _FixedPointIterationPositions[p_id];
 	float density_p = 0.0f;
 
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
-		float3 q = _Positions[q_id];
+		float3 q = _FixedPointIterationPositions[q_id];
 		density_p += W(distance(p, q));
 	}
 
@@ -93,7 +109,7 @@ void ComputeDensity(uint p_id : SV_DispatchThreadID)
 void ComputePressure(uint p_id : SV_DispatchThreadID)
 {
 	//speed of sound
-	float c = 15;
+	float c = 315;
 
 	//reference density
 	float density_neutral = 1000;
@@ -104,6 +120,7 @@ void ComputePressure(uint p_id : SV_DispatchThreadID)
 	float density = _Densities[p_id];
 
 	//Cole equation of state for water at sea level
+
 	_Pressures[p_id] = density_neutral * pow(c, 2) * (pow(abs(density) / density_neutral, gamma) - 1);
 
 }
@@ -112,9 +129,7 @@ void ComputePressure(uint p_id : SV_DispatchThreadID)
 void CopyBuffers(uint id : SV_DispatchThreadID)
 {
 
-	 _Positions[id] = _NextPositions[id];
-	 _Velocities[id] = _NextVelocities[id];
-
+	 _CopyBufferDestination[id] = _CopyBufferOrigin[id];
 
 }
 
