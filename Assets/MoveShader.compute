@@ -4,12 +4,13 @@
 #pragma kernel ComputeDensity
 #pragma kernel ComputePressure
 #pragma kernel CopyBuffers
+#pragma kernel ResolveWallCollisions
 
-// Create a RenderTexture with enableRandomWrite flag and set it
-// with cs.SetTexture
-//RWTexture2D<float4> Result;
 
 static float PI = 3.14159265358979323846;
+static float h = 1.0f;
+
+static float3 g_down = {0.0f, -9.8f, 0.0f};
 
 RWStructuredBuffer<float3> _Positions, _NextPositions;
 RWStructuredBuffer<float3> _Velocities, _NextVelocities;
@@ -20,59 +21,59 @@ RWStructuredBuffer<float3> _CopyBufferOrigin, _CopyBufferDestination;
 
 RWStructuredBuffer<float> _Densities, _Pressures;
 
+struct CollisionContainerWall
+{
+	float3 inward_normal;
+	float3 given_point;
+	float elasticity;
+};
+
+StructuredBuffer<CollisionContainerWall> _CollisionContainerWalls;
+
 float _Step, _DeltaTime;
 
+int _nCollisionContainerWalls;
 
 uint _nBodies;
 
-float F_prime(float d)
-{
-	return 0.5f;
-}
+uint _nContainerWalls, _CurrentWallID;
 
 float W(float d)
 {
-	return 1 / PI * exp(- pow(d, 2));
+	return 1 / (pow(h , 2) * PI) * exp(- pow(d, 2) / pow(h , 2));
 }
 
 float3 W_gradient_q(float3 q, float3 p)
 {
-	return -2.0f * W(distance(q, p)) * (q - p);
+	return -2.0f * W(distance(q, p)) * (q - p) / pow(h , 2);
 }
 
+
+//You could also fill in a matrix first, and sum the columns later...
 float3 getAccelerationIteration(uint p_id)
 {
 	float3 p = _FixedPointIterationPositions[p_id];
 	float3 accel_p = {0.0f, 0.0f, 0.0f};
 
+	//pressure at sea level
+	float reference_pressure = 100000.0f; //121000000.0f;
+
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
-		accel_p += - 1/1000.0f * (_Pressures[p_id] / pow(_Densities[p_id], 2) +
-						_Pressures[q_id] / pow(_Densities[q_id], 2)
+		accel_p += - 1/1000.0f * (
+						(_Pressures[p_id] - reference_pressure) / pow(_Densities[p_id], 2) +
+						(_Pressures[q_id] - reference_pressure) / pow(_Densities[q_id], 2)
 					 ) * W_gradient_q(q, p);
 	}
-	return accel_p;
+
+	return accel_p + g_down;
 
 	//float3 zero = {0.0f, 0.0f, 0.0f};
 	//return zero;
 
 }
 
-
-//[numthreads(1,1,1)]
-//void Main(uint id : SV_DispatchThreadID)
-//{
-//	float dt = _DeltaTime;
-//	if (id >= _nBodies)
-//        return;
-//
-//	float3 accel_id = getAcceleration(id);
-//	_NextPositions[id] = _Positions[id] + dt * _Velocities[id];
-//	_NextVelocities[id] = _Velocities[id] + dt * accel_id;
-//
-//	
-//}
 
 
 [numthreads(1,1,1)]
@@ -119,24 +120,65 @@ void ComputePressure(uint p_id : SV_DispatchThreadID)
 
 	float density = _Densities[p_id];
 
-	//pressure at sea level
-	float spuriousAttractionForce = 121000000.0f;
-
 	//Cole equation of state for water at sea level
 
-	_Pressures[p_id] = density_neutral * pow(c, 2) * (pow(abs(density) / density_neutral, gamma) - 1) + spuriousAttractionForce;
+	_Pressures[p_id] = density_neutral * pow(c, 2) * (pow(abs(density) / density_neutral, gamma) - 1);
 
 
 }
 
 [numthreads(1,1,1)]
-void CopyBuffers(uint id : SV_DispatchThreadID)
+void CopyBuffers(uint p_id : SV_DispatchThreadID)
 {
-
-	 _CopyBufferDestination[id] = _CopyBufferOrigin[id];
-
+	 _CopyBufferDestination[p_id] = _CopyBufferOrigin[p_id];
 }
 
 
+bool outside_wall(uint p_id, uint wall_id)
+{
+	float3 p = _NextPositions[p_id];
+	CollisionContainerWall wall = _CollisionContainerWalls[wall_id];
+	return dot(p - wall.given_point, wall.inward_normal) < 0;
+}
 
+bool moving_away(uint p_id, uint wall_id)
+{
+	float3 p_dot = _NextVelocities[p_id];
+	CollisionContainerWall wall = _CollisionContainerWalls[wall_id];
+	return dot(p_dot, wall.inward_normal) < 0;
+}
+
+float3 reset_position(uint p_id, uint wall_id)
+{
+	float3 p = _NextPositions[p_id];
+	CollisionContainerWall wall = _CollisionContainerWalls[wall_id];
+
+	float p_dot_n = dot(p - wall.given_point, wall.inward_normal);
+	return p - 2 * p_dot_n * wall.inward_normal;
+	
+}
+
+float3 reflect_velocity(uint p_id, uint wall_id)
+{
+	float3 p_dot = _NextVelocities[p_id];
+	CollisionContainerWall wall = _CollisionContainerWalls[wall_id];
+
+	float p_dot_n = dot(p_dot, wall.inward_normal);
+	return p_dot - (1 + wall.elasticity) * p_dot_n * wall.inward_normal;
+	
+}
+
+[numthreads(1,1,1)]
+void ResolveWallCollisions(uint p_id : SV_DispatchThreadID)
+{
+	if(outside_wall(p_id, _CurrentWallID))
+	{
+		_NextPositions[p_id] = reset_position(p_id, _CurrentWallID);
+
+		if(moving_away(p_id, _CurrentWallID))
+		{
+			_NextVelocities[p_id] = reflect_velocity(p_id, _CurrentWallID);
+        }
+	}
+}
 

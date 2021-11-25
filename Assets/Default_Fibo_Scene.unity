@@ -200,7 +200,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 618809588}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalPosition: {x: 0, y: 1, z: -100}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
@@ -329,7 +329,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spiralScale: 10
-  fixedPointIterations: 40
+  stepsPerUpdate: 40
+  fixedPointIterations: 2
+  wall_elasticity: 0.492
   material: {fileID: 2100000, guid: ba134cbe9ad00456080a61beff492244, type: 2}
   mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   moveShader: {fileID: 7200000, guid: 48f77a915fb6f436b9f2488f7e3a7f5b, type: 3}
