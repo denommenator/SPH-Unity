@@ -3,17 +3,30 @@
 #pragma kernel FixedPointIteration
 #pragma kernel ComputeDensity
 #pragma kernel ComputePressure
+#pragma kernel ComputeAcceleration
+
+#pragma kernel ComputeColorFieldGradient
+#pragma kernel ComputeColorFieldLaplacian
 #pragma kernel CopyBuffers
 #pragma kernel ResolveWallCollisions
 
 
 static float PI = 3.14159265358979323846;
-static float h = 1.0f;
 
-static float3 g_down = {0.0f, -9.8f, 0.0f};
+static float3 zero_vec = {0.0f, 0.0f, 0.0f};
+static float particleMass = 1000.0f;
+
 
 RWStructuredBuffer<float3> _Positions, _NextPositions;
 RWStructuredBuffer<float3> _Velocities, _NextVelocities;
+RWStructuredBuffer<float3> _Accelerations;
+
+RWStructuredBuffer<float3> _ColorFieldGradient;
+RWStructuredBuffer<float> _ColorFieldLaplacian;
+
+float _g, _h, _k, _sigma;
+
+float _surfaceTensionThreshold;
 
 RWStructuredBuffer<float3> _FixedPointIterationPositions, _FixedPointIterationVelocities;
 
@@ -38,69 +51,158 @@ uint _nBodies;
 
 uint _nContainerWalls, _CurrentWallID;
 
-float W(float d)
+
+
+//smoothing "kernels"
+float W_Gaussian(float3 r_vec, float h)
 {
-	return 1 / (pow(h , 2) * PI) * exp(- pow(d, 2) / pow(h , 2));
+	float r_squared = dot(r_vec, r_vec);
+	return 1 / (pow(h , 2) * PI) * exp(- r_squared / pow(h , 2));
 }
 
-float3 W_gradient_q(float3 q, float3 p)
+float3 W_Gaussian_gradient(float3 r_vec, float h)
 {
-	return -2.0f * W(distance(q, p)) * (q - p) / pow(h , 2);
+	return -2.0f * W_Gaussian(r_vec, h) * (r_vec) / pow(h , 2);
+}
+
+float W_Viscocity_Laplacian(float3 r_vec,float h)
+{
+	float r = length(r_vec);
+	return 45/(PI * pow(h, 6)) * (h-r);
+}
+
+float W_poly(float3 r_vec, float h)
+{
+	float r_squared = dot(r_vec,r_vec);
+	float result;
+	if(r_squared > pow(h, 2))
+	{
+		result = 0.0f;
+	}
+	else
+	{
+		result = 315/(64*pow(h,9))*pow(pow(h,2)-r_squared, 3);
+	}
+	return result;
+
+}
+
+float3 W_poly_gradient(float3 r_vec, float h)
+{
+	float r_squared = dot(r_vec, r_vec);
+	float3 result;
+	if(r_squared > pow(h, 2) )
+	{
+		result = zero_vec;
+	}
+	else
+	{
+		result = (315*3)/(64*PI*pow(h,9))*pow(pow(h,2)-r_squared,2)*(-2)*r_vec;
+	}
+	return result;
 }
 
 
-//You could also fill in a matrix first, and sum the columns later...
-float3 getAccelerationIteration(uint p_id)
+float W_poly_laplacian(float3 r_vec, float h)
 {
+	float r_squared = dot(r_vec, r_vec);
+
+	float result;
+	if(r_squared > pow(h, 2) )
+	{
+		result = 0.0f;
+	}
+	else
+	{
+		result = (-6*315*3)/(64*PI*pow(h,9))*pow(pow(h,2)-r_squared,2) + r_squared*(4*6*315)/(64*PI*pow(h,9))*(pow(h,2)-r_squared);
+	}
+	return result;
+}
+
+float3 W_spiky_gradient(float3 r_vec, float h)
+{
+	float r = length(r_vec);
+	float3 result;
+	if( r < 0.000001f )
+	{
+		result = zero_vec;
+	}
+
+	else if(r > h)
+	{
+		result = zero_vec;
+	}
+	else
+	{
+		result = -15/(PI*pow(h,6))*3*pow((h-r),2)*normalize(r_vec);
+	}
+	return result;
+}
+
+float3 pressureForce(uint p_id, float h)
+{
+	float3 pressureForce_p = {0.0f, 0.0f, 0.0f};
 	float3 p = _FixedPointIterationPositions[p_id];
-	float3 accel_p = {0.0f, 0.0f, 0.0f};
-
-	//pressure at sea level
-	float reference_pressure = 100000.0f; //121000000.0f;
-
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
-		accel_p += - 1/1000.0f * (
-						(_Pressures[p_id] - reference_pressure) / pow(_Densities[p_id], 2) +
-						(_Pressures[q_id] - reference_pressure) / pow(_Densities[q_id], 2)
-					 ) * W_gradient_q(q, p);
+		pressureForce_p += -particleMass * ((_Pressures[p_id] + _Pressures[q_id]) 
+						  / (2 * _Densities[q_id])) * W_spiky_gradient(q - p, h);
 	}
+	return pressureForce_p;
+}
 
-	return accel_p + g_down;
+float3 surfaceForce(uint p_id, float sigma)
+{
+	float3 p = _FixedPointIterationPositions[p_id];
+	float3 n = _ColorFieldGradient[p_id];
+	return -sigma * step(_surfaceTensionThreshold, length(n)) * _ColorFieldLaplacian[p_id] * normalize(n);
+}
 
-	//float3 zero = {0.0f, 0.0f, 0.0f};
-	//return zero;
+float3 viscocityForce(uint p_id, uint q_id)
+{
 
 }
 
 
+float3 getAcceleration(uint p_id, float h, float g, float sigma)
+{
+	float3 g_down = {0.0f, -g, 0.0f};
+
+	return pressureForce(p_id, h) + surfaceForce(p_id, sigma) + g_down;
+
+
+}
 
 [numthreads(1,1,1)]
 void FixedPointIteration(uint id : SV_DispatchThreadID)
 {
+	float h = _h;
+	float g = _g;
+	float sigma = _sigma;
 	float dt = _DeltaTime;
 	if (id >= _nBodies)
         return;
 
-	float3 accel_p_id = getAccelerationIteration(id);
 	_NextPositions[id] = _Positions[id] + dt * _FixedPointIterationVelocities[id];
-	_NextVelocities[id] = _Velocities[id] + dt * accel_p_id;
+	_NextVelocities[id] = _Velocities[id] + dt * _Accelerations[id];
 
 	
 }
 
+//You could also fill in a matrix first, and sum the columns later...
 
 [numthreads(1,1,1)]
 void ComputeDensity(uint p_id : SV_DispatchThreadID)
 {
+	float h = _h;
 	float3 p = _FixedPointIterationPositions[p_id];
 	float density_p = 0.0f;
 
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
-		density_p += W(distance(p, q));
+		density_p += particleMass * W_Gaussian(p-q, h);
 	}
 
 	_Densities[p_id] = density_p;
@@ -109,23 +211,60 @@ void ComputeDensity(uint p_id : SV_DispatchThreadID)
 [numthreads(1,1,1)]
 void ComputePressure(uint p_id : SV_DispatchThreadID)
 {
-	//speed of sound
-	float c = 350.0f;
+	//speed of sound (?)
+	float k = _k;
 
 	//reference density
-	float density_neutral = 1000.0f;
-
-	//heat capacity ratio
-	float gamma = 3.0f;
+	float density_neutral = particleMass;
 
 	float density = _Densities[p_id];
 
 	//Cole equation of state for water at sea level
 
-	_Pressures[p_id] = density_neutral * pow(c, 2) * (pow(abs(density) / density_neutral, gamma) - 1);
+	_Pressures[p_id] = k * (density - density_neutral);
 
 
 }
+
+[numthreads(1,1,1)]
+void ComputeColorFieldGradient(uint p_id : SV_DispatchThreadID)
+{
+	float h = _h;
+	float3 p = _FixedPointIterationPositions[p_id];
+	float3 colorFieldGradient_p = {0.0f, 0.0f, 0.0f};
+
+	for(uint q_id = 0; q_id < _nBodies; q_id++)
+	{
+		float3 q = _FixedPointIterationPositions[q_id];
+		colorFieldGradient_p += particleMass /_Densities[q_id] * W_Gaussian_gradient(p - q, h);
+	}
+
+	_ColorFieldGradient[p_id] = colorFieldGradient_p;
+}
+
+[numthreads(1,1,1)]
+void ComputeColorFieldLaplacian(uint p_id : SV_DispatchThreadID)
+{
+	float h = _h;
+	float3 p = _FixedPointIterationPositions[p_id];
+	float colorFieldLaplacian_p = 0.0f;
+
+	for(uint q_id = 0; q_id < _nBodies; q_id++)
+	{
+		float3 q = _FixedPointIterationPositions[q_id];
+		colorFieldLaplacian_p += particleMass / _Densities[q_id] * W_poly_laplacian(p - q, h);
+	}
+
+	_ColorFieldLaplacian[p_id] = colorFieldLaplacian_p;
+}
+
+
+[numthreads(1,1,1)]
+void ComputeAcceleration(uint p_id : SV_DispatchThreadID)
+{
+	_Accelerations[p_id] = getAcceleration(p_id, _h, _g, _sigma);
+}
+
 
 [numthreads(1,1,1)]
 void CopyBuffers(uint p_id : SV_DispatchThreadID)
