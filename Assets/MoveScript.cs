@@ -4,10 +4,14 @@ using UnityEngine;
 
 public class MoveScript : MonoBehaviour
 {
-    
+    private int thread_groups_dim = 1024;
+    private int n_thread_groups;
 
     ComputeBuffer positionBuffer, nextPositionBuffer;
     ComputeBuffer velocityBuffer, nextVelocityBuffer;
+
+    ComputeBuffer viscocityFieldBuffer;
+
     ComputeBuffer accelerationBuffer;
 
     ComputeBuffer fixedPointIterationPositionBuffer, fixedPointIterationVelocityBuffer;
@@ -42,6 +46,9 @@ public class MoveScript : MonoBehaviour
     [SerializeField, Range(0, 10.0f)]
     float k = 1.0f;
 
+    [SerializeField, Range(0, 1_000_000.0f)]
+    float mu = 1.0f;
+
     [SerializeField, Range(0, 10.0f)]
     float surfaceTensionThreshold = 1.0f;
 
@@ -62,6 +69,8 @@ public class MoveScript : MonoBehaviour
 
     static readonly int velocitiesID = Shader.PropertyToID("_Velocities");
     static readonly int nextVelocitiesID = Shader.PropertyToID("_NextVelocities");
+
+    static readonly int viscocityFieldID = Shader.PropertyToID("_ViscocityField");
 
     static readonly int accelerationsID = Shader.PropertyToID("_Accelerations");
 
@@ -86,6 +95,7 @@ public class MoveScript : MonoBehaviour
     static readonly int gID = Shader.PropertyToID("_g");
     static readonly int hID = Shader.PropertyToID("_h");
     static readonly int kID = Shader.PropertyToID("_k");
+    static readonly int muID = Shader.PropertyToID("_mu");
     static readonly int sigmaID = Shader.PropertyToID("_sigma");
 
     static readonly int surfaceTensionThresholdID = Shader.PropertyToID("_surfaceTensionThreshold");
@@ -158,7 +168,10 @@ public class MoveScript : MonoBehaviour
 
     void Start()
     {
+        
         nBodies = Mathf.FloorToInt(1.0f * Mathf.PI * Mathf.Pow(spiralScale, 2));
+
+        n_thread_groups = Mathf.CeilToInt((float) nBodies / thread_groups_dim);
 
         containerSize = spiralScale * Mathf.Sqrt(nBodies);
         nCollisionContainerWalls = 5;
@@ -170,6 +183,8 @@ public class MoveScript : MonoBehaviour
 
         colorFieldGradientBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
         colorFieldLaplacianBuffer = new ComputeBuffer(nBodies, sizeof(float));
+
+        viscocityFieldBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
 
         //initial positions & velocities
         positionBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
@@ -221,6 +236,8 @@ public class MoveScript : MonoBehaviour
 
         accelerationBuffer.Release();
 
+        viscocityFieldBuffer.Release();
+
         fixedPointIterationPositionBuffer.Release();
         fixedPointIterationVelocityBuffer.Release();
 
@@ -265,6 +282,7 @@ public class MoveScript : MonoBehaviour
         moveShader.SetFloat(gID, g);
         moveShader.SetFloat(hID, h);
         moveShader.SetFloat(kID, k);
+        moveShader.SetFloat(muID, mu);
         moveShader.SetFloat(sigmaID, sigma);
         moveShader.SetFloat(surfaceTensionThresholdID, surfaceTensionThreshold);
 
@@ -275,12 +293,12 @@ public class MoveScript : MonoBehaviour
         moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, positionBuffer);
         moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, fixedPointIterationPositionBuffer);
 
-        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), n_thread_groups, 1, 1);
 
         moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, velocityBuffer);
         moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, fixedPointIterationVelocityBuffer);
 
-        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), n_thread_groups, 1, 1);
 
         for (int i = 0; i < fixedPointIterations; i++)
         {
@@ -288,28 +306,33 @@ public class MoveScript : MonoBehaviour
             moveShader.SetBuffer(moveShader.FindKernel("ComputeDensity"), fixedPointIterationsPositionsID, fixedPointIterationPositionBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("ComputeDensity"), densitiesID, densityBuffer);
 
-            moveShader.Dispatch(moveShader.FindKernel("ComputeDensity"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("ComputeDensity"), n_thread_groups, 1, 1);
 
             moveShader.SetBuffer(moveShader.FindKernel("ComputePressure"), densitiesID, densityBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("ComputePressure"), pressuresID, pressureBuffer);
 
-            moveShader.Dispatch(moveShader.FindKernel("ComputePressure"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("ComputePressure"), n_thread_groups, 1, 1);
 
             moveShader.SetBuffer(moveShader.FindKernel("ComputeColorFieldGradient"), densitiesID, densityBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("ComputeColorFieldGradient"), fixedPointIterationsPositionsID, fixedPointIterationPositionBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("ComputeColorFieldGradient"), colorFieldGradientID, colorFieldGradientBuffer);
             
-            moveShader.Dispatch(moveShader.FindKernel("ComputeColorFieldGradient"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("ComputeColorFieldGradient"), n_thread_groups, 1, 1);
 
 
-            ///
-            //this is giving us an issue, changing the positions of the particles...
-            ///
             moveShader.SetBuffer(moveShader.FindKernel("ComputeColorFieldLaplacian"), densitiesID, densityBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("ComputeColorFieldLaplacian"), fixedPointIterationsPositionsID, fixedPointIterationPositionBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("ComputeColorFieldLaplacian"), colorFieldLaplacianID, colorFieldLaplacianBuffer);
             
-            moveShader.Dispatch(moveShader.FindKernel("ComputeColorFieldLaplacian"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("ComputeColorFieldLaplacian"), n_thread_groups, 1, 1);
+
+
+            moveShader.SetBuffer(moveShader.FindKernel("ComputeViscocityField"), densitiesID, densityBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("ComputeViscocityField"), fixedPointIterationsPositionsID, fixedPointIterationPositionBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("ComputeViscocityField"), fixedPointIterationsVelocitiesID, fixedPointIterationVelocityBuffer);
+            moveShader.SetBuffer(moveShader.FindKernel("ComputeViscocityField"), viscocityFieldID, viscocityFieldBuffer);
+
+            moveShader.Dispatch(moveShader.FindKernel("ComputeViscocityField"), n_thread_groups, 1, 1);
             ///
 
 
@@ -323,12 +346,14 @@ public class MoveScript : MonoBehaviour
             moveShader.SetBuffer(moveShader.FindKernel("ComputeAcceleration"), colorFieldGradientID, colorFieldGradientBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("ComputeAcceleration"), colorFieldLaplacianID, colorFieldLaplacianBuffer);
 
+            moveShader.SetBuffer(moveShader.FindKernel("ComputeAcceleration"), viscocityFieldID, viscocityFieldBuffer);
+
             moveShader.SetBuffer(moveShader.FindKernel("ComputeAcceleration"), fixedPointIterationsPositionsID, fixedPointIterationPositionBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("ComputeAcceleration"), fixedPointIterationsVelocitiesID, fixedPointIterationVelocityBuffer);
 
             moveShader.SetBuffer(moveShader.FindKernel("ComputeAcceleration"), accelerationsID, accelerationBuffer);
 
-            moveShader.Dispatch(moveShader.FindKernel("ComputeAcceleration"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("ComputeAcceleration"), n_thread_groups, 1, 1);
 
 
             //compute the new positions and velocities
@@ -344,18 +369,18 @@ public class MoveScript : MonoBehaviour
             moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), nextPositionsID, nextPositionBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("FixedPointIteration"), nextVelocitiesID, nextVelocityBuffer);
 
-            moveShader.Dispatch(moveShader.FindKernel("FixedPointIteration"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("FixedPointIteration"), n_thread_groups, 1, 1);
 
             //update i->i+1 in the fixed point position/velocity buffers
             moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, nextPositionBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, fixedPointIterationPositionBuffer);
 
-            moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), n_thread_groups, 1, 1);
 
             moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, nextVelocityBuffer);
             moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, fixedPointIterationVelocityBuffer);
 
-            moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), n_thread_groups, 1, 1);
         }
 
         //collision detection / resolution
@@ -366,7 +391,7 @@ public class MoveScript : MonoBehaviour
         for (int wall_id = 0; wall_id < nCollisionContainerWalls; wall_id++)
         {
             moveShader.SetInt(currentWallID, wall_id);
-            moveShader.Dispatch(moveShader.FindKernel("ResolveWallCollisions"), nBodies, 1, 1);
+            moveShader.Dispatch(moveShader.FindKernel("ResolveWallCollisions"), n_thread_groups, 1, 1);
         }
         
 
@@ -376,12 +401,12 @@ public class MoveScript : MonoBehaviour
         moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, nextPositionBuffer);
         moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, positionBuffer);
 
-        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), n_thread_groups, 1, 1);
 
         moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferOriginID, nextVelocityBuffer);
         moveShader.SetBuffer(moveShader.FindKernel("CopyBuffers"), copyBufferDestinationID, velocityBuffer);
 
-        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), nBodies, 1, 1);
+        moveShader.Dispatch(moveShader.FindKernel("CopyBuffers"), n_thread_groups, 1, 1);
 
 
         
