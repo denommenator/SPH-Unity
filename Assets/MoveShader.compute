@@ -27,7 +27,8 @@ RWStructuredBuffer<float> _ColorFieldLaplacian;
 
 RWStructuredBuffer<float3> _ViscocityField;
 
-float _g, _h, _k, _sigma, _mu, _densityFactor;
+float _hDensity, _hViscocity, _hSurfaceTension;
+float _g, _k, _sigma, _mu, _densityFactor;
 
 float _surfaceTensionThreshold;
 
@@ -149,7 +150,7 @@ float3 W_spiky_gradient(float3 r_vec, float h)
 	return result;
 }
 
-float3 pressureForce(uint p_id, float h)
+float3 pressureForce(uint p_id)
 {
 	float3 pressureForce_p = {0.0f, 0.0f, 0.0f};
 	float3 p = _FixedPointIterationPositions[p_id];
@@ -157,7 +158,7 @@ float3 pressureForce(uint p_id, float h)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
 		pressureForce_p += -particleMass * ((_Pressures[p_id] + _Pressures[q_id]) 
-						  / (2 * _Densities[q_id])) * W_spiky_gradient(p - q, h);
+						  / (2 * _Densities[q_id])) * W_spiky_gradient(p - q, _hDensity);
 	}
 	return pressureForce_p;
 }
@@ -175,11 +176,11 @@ float3 viscocityAcceleration(uint p_id)
 }
 
 
-float3 getAcceleration(uint p_id, float h, float g, float sigma)
+float3 getAcceleration(uint p_id, float g, float sigma)
 {
 	float3 g_down = {0.0f, -g, 0.0f};
 
-	return pressureForce(p_id, h) + surfaceAcceleration(p_id, sigma) + viscocityAcceleration(p_id) + g_down;
+	return pressureForce(p_id) + surfaceAcceleration(p_id, sigma) + viscocityAcceleration(p_id) + g_down;
 
 
 }
@@ -189,7 +190,6 @@ void FixedPointIteration(uint p_id : SV_DispatchThreadID)
 {
 	if (p_id >= _nBodies)
         return;
-	float h = _h;
 	float g = _g;
 	float sigma = _sigma;
 	float dt = _DeltaTime;
@@ -208,7 +208,7 @@ void ComputeDensity(uint p_id : SV_DispatchThreadID)
 {
 	if (p_id >= _nBodies)
         return;
-	float h = _h;
+	float h = _hDensity;
 	float3 p = _FixedPointIterationPositions[p_id];
 	float density_p = 0.0f;
 
@@ -246,14 +246,13 @@ void ComputeColorFieldGradient(uint p_id : SV_DispatchThreadID)
 {
 	if (p_id >= _nBodies)
         return;
-	float h = _h;
 	float3 p = _FixedPointIterationPositions[p_id];
 	float3 colorFieldGradient_p = {0.0f, 0.0f, 0.0f};
 
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
-		colorFieldGradient_p += particleMass /_Densities[q_id] * W_poly_gradient(p - q, h);
+		colorFieldGradient_p += particleMass /_Densities[q_id] * W_poly_gradient(p - q, _hSurfaceTension);
 	}
 
 	_ColorFieldGradient[p_id] = colorFieldGradient_p;
@@ -264,14 +263,13 @@ void ComputeColorFieldLaplacian(uint p_id : SV_DispatchThreadID)
 {
 	if (p_id >= _nBodies)
         return;
-	float h = _h;
 	float3 p = _FixedPointIterationPositions[p_id];
 	float colorFieldLaplacian_p = 0.0f;
 
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
-		colorFieldLaplacian_p += particleMass / _Densities[q_id] * W_poly_laplacian(p - q, h);
+		colorFieldLaplacian_p += particleMass / _Densities[q_id] * W_poly_laplacian(p - q, _hSurfaceTension);
 	}
 
 	_ColorFieldLaplacian[p_id] = colorFieldLaplacian_p;
@@ -282,7 +280,6 @@ void ComputeViscocityField(uint p_id : SV_DispatchThreadID)
 {
 	if (p_id >= _nBodies)
         return;
-	float h = _h;
 	float3 p = _FixedPointIterationPositions[p_id];
 	float3 v_p = _FixedPointIterationVelocities[p_id];
 
@@ -292,7 +289,7 @@ void ComputeViscocityField(uint p_id : SV_DispatchThreadID)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
 		float3 v_q = _FixedPointIterationVelocities[q_id];
-		viscocityField_p += particleMass / _Densities[q_id] * (v_q - v_p) * W_viscocity_laplacian(p - q, h);
+		viscocityField_p += particleMass / _Densities[q_id] * (v_q - v_p) * W_viscocity_laplacian(p - q, _hViscocity);
 	}
 
 	_ViscocityField[p_id] = viscocityField_p;
@@ -304,7 +301,7 @@ void ComputeAcceleration(uint p_id : SV_DispatchThreadID)
 {
 	if (p_id >= _nBodies)
         return;
-	_Accelerations[p_id] = getAcceleration(p_id, _h, _g, _sigma);
+	_Accelerations[p_id] = getAcceleration(p_id, _g, _sigma);
 }
 
 

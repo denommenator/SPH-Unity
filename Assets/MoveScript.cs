@@ -23,45 +23,52 @@ public class MoveScript : MonoBehaviour
 
 
     public float containerHeight = 15;
-    public float containerWidth = 10;
-    public float containerDepth = 10;
+    public float containerWidth = 40;
+    public float containerDepth = 5;
 
 
     [SerializeField, Range(0, 1_000)]
-    public float initialParticleHeight = 3.0f;
+    public float initialParticleHeight = 5.0f;
 
     //[SerializeField, Range(2, 1_000)]
     private int nBodies;
 
     [SerializeField, Range(1, 40)]
-    private int stepsPerUpdate = 1;
+    private int stepsPerUpdate = 4;
 
     [SerializeField, Range(1, 40)]
-    private int fixedPointIterations = 1;
+    private int fixedPointIterations = 8;
 
     [SerializeField, Range(0, 1)]
-    float wall_elasticity = 1.0f;
+    float wall_elasticity = 0.5f;
 
     [SerializeField, Range(0, 9.8f)]
-    float g = 9.8f;
+    float g = 0.0f;
 
     [SerializeField, Range(0, 10.0f)]
-    float h = 1.0f;
+    float hDensity = 2.0f;
+
+    [SerializeField, Range(0, 10.0f)]
+    float hViscocity = 2.0f;
+
+    [SerializeField, Range(0, 10.0f)]
+    float hSurfaceTension = 2.0f;
+
 
     [SerializeField, Range(0, 10.0f)]
     float initialParticleSeparation = 1.0f;
 
     [SerializeField, Range(0, 10.0f)]
-    float k = 1.0f;
+    float k = 10.0f;
 
     [SerializeField, Range(0, 1_000_000.0f)]
-    float mu = 1.0f;
+    float mu = 500.0f;
 
     [SerializeField, Range(0, 10.0f)]
-    float surfaceTensionThreshold = 1.0f;
+    float surfaceTensionThreshold = 0.5f;
 
     [SerializeField, Range(0, 10000.0f)]
-    float sigma = 1.0f;
+    float sigma = 1500.0f;
 
     [SerializeField, Range(0, 1.0f)]
     float densityFactor = 0.5f;
@@ -103,8 +110,11 @@ public class MoveScript : MonoBehaviour
     static readonly int deltaTimeID = Shader.PropertyToID("_DeltaTime");
     static readonly int nBodiesID = Shader.PropertyToID("_nBodies");
 
+    static readonly int hDensityID = Shader.PropertyToID("_hDensity");
+    static readonly int hViscocityID = Shader.PropertyToID("_hViscocity");
+    static readonly int hSurfaceTensionID = Shader.PropertyToID("_hSurfaceTension");
+
     static readonly int gID = Shader.PropertyToID("_g");
-    static readonly int hID = Shader.PropertyToID("_h");
     static readonly int kID = Shader.PropertyToID("_k");
     static readonly int muID = Shader.PropertyToID("_mu");
     static readonly int sigmaID = Shader.PropertyToID("_sigma");
@@ -306,8 +316,11 @@ public class MoveScript : MonoBehaviour
     void StepSimulation()
     {
         moveShader.SetInt(nBodiesID, nBodies);
-        moveShader.SetFloat(gID, g);
-        moveShader.SetFloat(hID, h);
+        moveShader.SetFloat(hDensityID, hDensity);
+        moveShader.SetFloat(hViscocityID, hViscocity);
+        moveShader.SetFloat(hSurfaceTensionID, hSurfaceTension);
+
+        moveShader.SetFloat(gID, g);        
         moveShader.SetFloat(kID, k);
         moveShader.SetFloat(muID, mu);
         moveShader.SetFloat(sigmaID, sigma);
