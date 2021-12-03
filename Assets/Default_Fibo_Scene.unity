@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657815, g: 0.49641192, b: 0.57481617, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -328,16 +328,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 68e97ea43684c4a359b58e9e2caa2533, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  spiralScale: 10
-  stepsPerUpdate: 15
-  fixedPointIterations: 5
+  containerHeight: 15
+  containerWidth: 10
+  containerDepth: 10
+  initialParticleHeight: 4
+  stepsPerUpdate: 4
+  fixedPointIterations: 8
   wall_elasticity: 1
   g: 0
-  h: 5.06
-  k: 1
-  mu: 1000
-  surfaceTensionThreshold: 10
-  sigma: 0
+  h: 2
+  initialParticleSeparation: 1
+  k: 0.1
+  mu: 300
+  surfaceTensionThreshold: 0.22
+  sigma: 500
+  densityFactor: 0.5
   material: {fileID: 2100000, guid: ba134cbe9ad00456080a61beff492244, type: 2}
   mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   moveShader: {fileID: 7200000, guid: 48f77a915fb6f436b9f2488f7e3a7f5b, type: 3}

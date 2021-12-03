@@ -10,7 +10,7 @@
 #pragma kernel CopyBuffers
 #pragma kernel ResolveWallCollisions
 
-#define thread_group_dim 1024
+#define thread_group_dim 64
 
 static float PI = 3.14159265358979323846;
 
@@ -27,7 +27,7 @@ RWStructuredBuffer<float> _ColorFieldLaplacian;
 
 RWStructuredBuffer<float3> _ViscocityField;
 
-float _g, _h, _k, _sigma, _mu;
+float _g, _h, _k, _sigma, _mu, _densityFactor;
 
 float _surfaceTensionThreshold;
 
@@ -91,7 +91,7 @@ float W_poly(float3 r_vec, float h)
 	}
 	else
 	{
-		result = 315/(64*pow(h,9))*pow(pow(h,2)-r_squared, 3);
+		result = 315/(64*PI *pow(h,9))*pow(pow(h,2)-r_squared, 3);
 	}
 	return result;
 
@@ -133,7 +133,7 @@ float3 W_spiky_gradient(float3 r_vec, float h)
 {
 	float r = length(r_vec);
 	float3 result;
-	if( r < 0.000001f )
+	if( r < 0.01f )
 	{
 		result = zero_vec;
 	}
@@ -157,7 +157,7 @@ float3 pressureForce(uint p_id, float h)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
 		pressureForce_p += -particleMass * ((_Pressures[p_id] + _Pressures[q_id]) 
-						  / (2 * _Densities[q_id])) * W_spiky_gradient(q - p, h);
+						  / (2 * _Densities[q_id])) * W_spiky_gradient(p - q, h);
 	}
 	return pressureForce_p;
 }
@@ -230,7 +230,7 @@ void ComputePressure(uint p_id : SV_DispatchThreadID)
 	float k = _k;
 
 	//reference density
-	float density_neutral = particleMass;
+	float density_neutral = particleMass * _densityFactor;
 
 	float density = _Densities[p_id];
 
@@ -253,7 +253,7 @@ void ComputeColorFieldGradient(uint p_id : SV_DispatchThreadID)
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
-		colorFieldGradient_p += particleMass /_Densities[q_id] * W_Gaussian_gradient(q - p, h);
+		colorFieldGradient_p += particleMass /_Densities[q_id] * W_poly_gradient(p - q, h);
 	}
 
 	_ColorFieldGradient[p_id] = colorFieldGradient_p;
@@ -271,7 +271,7 @@ void ComputeColorFieldLaplacian(uint p_id : SV_DispatchThreadID)
 	for(uint q_id = 0; q_id < _nBodies; q_id++)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
-		colorFieldLaplacian_p += particleMass / _Densities[q_id] * W_poly_laplacian(q - p, h);
+		colorFieldLaplacian_p += particleMass / _Densities[q_id] * W_poly_laplacian(p - q, h);
 	}
 
 	_ColorFieldLaplacian[p_id] = colorFieldLaplacian_p;
@@ -292,7 +292,7 @@ void ComputeViscocityField(uint p_id : SV_DispatchThreadID)
 	{
 		float3 q = _FixedPointIterationPositions[q_id];
 		float3 v_q = _FixedPointIterationVelocities[q_id];
-		viscocityField_p += particleMass / _Densities[q_id] * (v_q - v_p) * W_viscocity_laplacian(q - p, h);
+		viscocityField_p += particleMass / _Densities[q_id] * (v_q - v_p) * W_viscocity_laplacian(p - q, h);
 	}
 
 	_ViscocityField[p_id] = viscocityField_p;

@@ -4,8 +4,9 @@ using UnityEngine;
 
 public class MoveScript : MonoBehaviour
 {
-    private int thread_groups_dim = 1024;
+    private int thread_groups_dim = 64;
     private int n_thread_groups;
+
 
     ComputeBuffer positionBuffer, nextPositionBuffer;
     ComputeBuffer velocityBuffer, nextVelocityBuffer;
@@ -21,9 +22,13 @@ public class MoveScript : MonoBehaviour
     ComputeBuffer colorFieldGradientBuffer, colorFieldLaplacianBuffer;
 
 
+    public float containerHeight = 15;
+    public float containerWidth = 10;
+    public float containerDepth = 10;
+
 
     [SerializeField, Range(0, 1_000)]
-    public float spiralScale = 10;
+    public float initialParticleHeight = 3.0f;
 
     //[SerializeField, Range(2, 1_000)]
     private int nBodies;
@@ -44,6 +49,9 @@ public class MoveScript : MonoBehaviour
     float h = 1.0f;
 
     [SerializeField, Range(0, 10.0f)]
+    float initialParticleSeparation = 1.0f;
+
+    [SerializeField, Range(0, 10.0f)]
     float k = 1.0f;
 
     [SerializeField, Range(0, 1_000_000.0f)]
@@ -54,6 +62,9 @@ public class MoveScript : MonoBehaviour
 
     [SerializeField, Range(0, 10000.0f)]
     float sigma = 1.0f;
+
+    [SerializeField, Range(0, 1.0f)]
+    float densityFactor = 0.5f;
 
     [SerializeField]
     Material material;
@@ -97,6 +108,7 @@ public class MoveScript : MonoBehaviour
     static readonly int kID = Shader.PropertyToID("_k");
     static readonly int muID = Shader.PropertyToID("_mu");
     static readonly int sigmaID = Shader.PropertyToID("_sigma");
+    static readonly int densityFactorID = Shader.PropertyToID("_densityFactor");
 
     static readonly int surfaceTensionThresholdID = Shader.PropertyToID("_surfaceTensionThreshold");
 
@@ -105,12 +117,9 @@ public class MoveScript : MonoBehaviour
 
     static readonly int currentWallID = Shader.PropertyToID("_CurrentWallID");
 
-    
 
 
 
-
-    private float containerSize;
 
     //refactor to 3 buffers
     public struct CollisionContainerWall
@@ -125,56 +134,90 @@ public class MoveScript : MonoBehaviour
     private CollisionContainerWall[] collisionContainerWalls;
     ComputeBuffer CollisionContainerWallBuffer;
 
-    CollisionContainerWall[] BoxContainer(float containerSize)
+    CollisionContainerWall[] BoxContainer(float width, float height, float depth, float wallElasticity)
     {
-        CollisionContainerWall wall_lower, wall_upper, wall_left, wall_right;
+        CollisionContainerWall wall_lower, wall_upper, wall_left, wall_right, wall_back, wall_front;
 
         wall_lower = new CollisionContainerWall
             {
                 inward_normal = Vector3.up,
-                point = containerSize / 2 * Vector3.down,
-                elasticity = wall_elasticity
-            };
+                point = Vector3.zero,
+                elasticity = wallElasticity
+        };
 
         wall_upper = new CollisionContainerWall
         {
             inward_normal = Vector3.down,
-            point = containerSize / 2 * Vector3.up,
-            elasticity = wall_elasticity
+            point = height * Vector3.up,
+            elasticity = wallElasticity
         };
 
         wall_left = new CollisionContainerWall
         {
             inward_normal = Vector3.right,
-            point = containerSize / 2 * Vector3.left,
-            elasticity = wall_elasticity
+            point = width / 2 * Vector3.left,
+            elasticity = wallElasticity
         };
 
         wall_right = new CollisionContainerWall
         {
             inward_normal = Vector3.left,
-            point = containerSize / 2 * Vector3.right,
-            elasticity = wall_elasticity
+            point = width / 2 * Vector3.right,
+            elasticity = wallElasticity
+        };
+
+        wall_back = new CollisionContainerWall
+        {
+            inward_normal = Vector3.forward,
+            point = depth * Vector3.back,
+            elasticity = wallElasticity
+        };
+
+        wall_front = new CollisionContainerWall
+        {
+            inward_normal = Vector3.back,
+            point = Vector3.zero,
+            elasticity = wallElasticity
         };
 
 
         CollisionContainerWall[] walls = new CollisionContainerWall[]
-            { wall_lower, wall_upper, wall_left, wall_right };
+            { wall_lower, wall_upper, wall_left, wall_right, wall_back, wall_front };
 
         return walls;
 
+    }
+
+    
+    Vector3[] getInitialPositions()
+    {
+        List<Vector3> initialPositionsList = new List<Vector3>();
+        for (Vector3 depth = Vector3.zero; -depth.z < containerDepth; depth += initialParticleSeparation * Vector3.back)
+        {
+            for (Vector3 width = containerWidth / 2 * Vector3.left; width.x < containerWidth / 2; width += initialParticleSeparation * Vector3.right)
+            {
+                for (Vector3 height = Vector3.zero; height.y < initialParticleHeight; height += initialParticleSeparation * Vector3.up)
+                {
+                    initialPositionsList.Add(depth + width + height);
+                }
+            }
+        }
+        return initialPositionsList.ToArray();
     }
 
 
     void Start()
     {
         
-        nBodies = Mathf.FloorToInt(1.0f * Mathf.PI * Mathf.Pow(spiralScale, 2));
 
-        n_thread_groups = Mathf.CeilToInt((float) nBodies / thread_groups_dim);
+    
 
-        containerSize = spiralScale * Mathf.Sqrt(nBodies);
-        nCollisionContainerWalls = 5;
+        Vector3[] initialPositions = getInitialPositions();
+
+        nBodies = initialPositions.Length;
+        Debug.Log("Simulating " + nBodies + " particles.\n");
+        n_thread_groups = Mathf.CeilToInt((float)nBodies / thread_groups_dim);
+
 
         //allocate & initialize buffers
 
@@ -193,12 +236,7 @@ public class MoveScript : MonoBehaviour
         fixedPointIterationPositionBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
         fixedPointIterationVelocityBuffer = new ComputeBuffer(nBodies, 3 * sizeof(float));
 
-        Vector3[] initialPositions = new Vector3[nBodies];
 
-        for (int id = 0; id < nBodies; id++)
-        {
-            initialPositions[id] = getFibonacciPosition(id);
-        }
 
         positionBuffer.SetData(initialPositions);
 
@@ -218,10 +256,13 @@ public class MoveScript : MonoBehaviour
 
         //set up collision container
 
-        collisionContainerWalls = BoxContainer(containerSize);
-        
+        collisionContainerWalls = BoxContainer(containerWidth, containerHeight, containerDepth, wall_elasticity);
+        nCollisionContainerWalls = collisionContainerWalls.Length;
+
         CollisionContainerWallBuffer = new ComputeBuffer(nCollisionContainerWalls, sizeof(float) * (3 * 2 + 1));
         CollisionContainerWallBuffer.SetData(collisionContainerWalls);
+
+
 
 
     }
@@ -251,20 +292,6 @@ public class MoveScript : MonoBehaviour
 
     }
 
-    Vector3 getFibonacciPosition(int n)
-    {
-        float phi = (1 + Mathf.Sqrt(5.0f)) / 2.0f;
-        float theta_0 = 2.0f * Mathf.PI / phi;
-
-        float r = Mathf.Sqrt(n);
-        float x = r * Mathf.Cos(n * theta_0);
-        float y = r * Mathf.Sin(n * theta_0);
-
-
-        return new Vector3(spiralScale * x / Mathf.Sqrt(nBodies), spiralScale * y / Mathf.Sqrt(nBodies), 0);
-
-    }
-
 
 
 
@@ -285,6 +312,7 @@ public class MoveScript : MonoBehaviour
         moveShader.SetFloat(muID, mu);
         moveShader.SetFloat(sigmaID, sigma);
         moveShader.SetFloat(surfaceTensionThresholdID, surfaceTensionThreshold);
+        moveShader.SetFloat(densityFactorID, densityFactor);
 
 
 
@@ -419,8 +447,8 @@ public class MoveScript : MonoBehaviour
     void Update()
     {
         material.SetBuffer(positionsID, positionBuffer);
-
-        Bounds bounds = new Bounds(Vector3.zero, Vector3.one * containerSize);
+        float max = Mathf.Max(containerDepth, containerHeight, containerWidth);
+        Bounds bounds = new Bounds(Vector3.zero, Vector3.one * max);
         Graphics.DrawMeshInstancedProcedural(mesh, 0, material, bounds, nBodies);
     }
 }
