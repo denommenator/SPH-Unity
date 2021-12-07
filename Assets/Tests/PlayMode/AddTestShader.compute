@@ -1,0 +1,28 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel AddTest
+
+#define thread_group_dim_x 2
+// Global variables
+
+StructuredBuffer<float> _A;
+StructuredBuffer<float> _B;
+
+RWStructuredBuffer<float> _Result;
+
+uint _ArrayDim;
+
+[numthreads(thread_group_dim_x,1,1)]
+void AddTest (uint3 id : SV_GroupThreadID)
+{
+    //Only 1 group should be launched.
+    //Each thread computes a float sum and stores it in result,
+    //then moves to next stride within the group.  
+    uint idx = id.x;
+    uint idx_stride = thread_group_dim_x;
+    while (idx < _ArrayDim)
+    {
+        _Result[idx] = _A[idx] + _B[idx];
+        idx += idx_stride;
+    }
+
+}
