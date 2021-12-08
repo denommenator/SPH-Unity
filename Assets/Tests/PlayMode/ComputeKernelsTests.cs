@@ -24,11 +24,31 @@ namespace Tests
             Assert.IsNotNull(testObject);
 
             AddTestScript testScript = testObject.GetComponent<AddTestScript>();
-            testScript.RunTest();
 
+            float[] A = new float[] { 1.0f, 2.0f, 3.0f };
+            float[] B = new float[] { 1.0f, 2.0f, 3.0f };
 
-            yield return null;
+            float[] Result = testScript.RunAddTest(A, B);
 
+            var comparer = new FloatEqualityComparer(10e-6f);
+
+            
+            while(true)
+            {
+                for (int i = 0; i < A.Length; i++)
+                {
+                    Assert.That(Result[i], Is.EqualTo(A[i] + B[i]).Using(comparer));
+
+                }
+                if(Time.realtimeSinceStartup > 5.0f)
+                {
+                    Assert.Fail("reached time out after 5 seconds!");
+                }
+                yield return new WaitForFixedUpdate();
+            }
+            
+
+            
 
         }
 

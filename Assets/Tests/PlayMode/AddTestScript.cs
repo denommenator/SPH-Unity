@@ -16,14 +16,12 @@ public class AddTestScript : MonoBehaviour
         // Use the Assert class to test conditions
 
 
-
     }
 
-    [Test]
-    public void RunTest()
+
+    public float[] RunAddTest(float[] A, float[] B)
     {
-        float[] A = new float[] { 1.0f, 2.0f, 3.0f };
-        float[] B = new float[] { 1.0f, 2.0f, 3.0f };
+        
 
         float[] Result = new float[A.Length];
 
@@ -53,18 +51,16 @@ public class AddTestScript : MonoBehaviour
 
         ResultBuffer.GetData(Result);
 
-
-        var comparer = new FloatEqualityComparer(10e-6f);
-
-        for (int i = 0; i < A.Length; i++)
-        {
-            Assert.That(Result[i], Is.EqualTo(A[i] + B[i]).Using(comparer));
-
-        }
-
         ABuffer.Release();
         BBuffer.Release();
         ResultBuffer.Release();
+
+        return Result;
+
+
+
+
+
     }
 
     // Update is called once per frame
