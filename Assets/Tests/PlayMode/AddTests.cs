@@ -8,7 +8,7 @@ using UnityEngine.TestTools.Utils;
 
 namespace Tests
 {
-    public class ComputeKernelsTests
+    public class AddTests
     {
         [OneTimeSetUp]
         public void LoadScene()

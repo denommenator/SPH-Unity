@@ -1,9 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.TestTools;
-using UnityEngine.TestTools.Utils;
-using NUnit.Framework;
+
 
 
 public class AddTestScript : MonoBehaviour
