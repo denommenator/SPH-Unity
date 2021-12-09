@@ -1,0 +1,39 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel VectorAdd
+
+#define thread_group_dim_x 512
+// Global variables
+
+StructuredBuffer<float> _A;
+StructuredBuffer<float> _B;
+
+RWStructuredBuffer<float> _Result;
+uint _ArrayDim;
+
+[numthreads(thread_group_dim_x,1,1)]
+void VectorAdd (uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    //Grid stride loop! Big catch here is that you can't access
+    //the number of groups that were launched without setting it as a constant variable
+    for (uint idx = thread_group_dim_x * group_id.x + thread_id.x;
+        idx < _ArrayDim;
+        idx += 1024 * thread_group_dim_x  //20 = the grid size, no SV variable to tell you how many groups were launched!
+        )
+    {
+        _Result[idx] = _A[idx] + _B[idx];
+    }
+
+    //More Naive "block-stride" loop. This is for only 1 block launch
+    //Only 1 group should be launched.
+    //Each thread computes a float sum and stores it in result,
+    //then moves to next stride within the group.  
+   /* uint idx = + id.x;
+    uint idx_stride = thread_group_dim_x;
+    while (idx < _ArrayDim)
+    {
+        _Result[idx] = _A[idx] + _B[idx];
+        idx += idx_stride;
+    }*/
+
+
+}

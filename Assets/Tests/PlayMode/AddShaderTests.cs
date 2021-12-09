@@ -3,61 +3,96 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEditor;
 
 namespace Tests
 {
 
     public class AddShaderTests
     {
+        private AddShaderFactories addShaderFactories;
+
         [OneTimeSetUp]
         public void LoadScene()
         {
+            //We can programmtically create scenes using SceneManager.CreateScene 
+            //and load in assets using UnityEditor.ShaderImporter
             UnityEngine.SceneManagement.SceneManager.LoadScene("AddShaderTests");
+
+            
         }
 
-        [UnityTest]
-        public IEnumerator AddTestFor5Seconds()
+        [UnitySetUp]
+        public IEnumerator LoadObjects()
         {
-            var testObject = GameObject.Find("AddShaderTest");
+            yield return new EnterPlayMode();
+
+            var testObject = GameObject.Find("AddShaderGameObject");
             Assert.IsNotNull(testObject);
 
-            AddShaderWrapper addShaderWrapper = testObject.GetComponent<AddShaderWrapper>();
+            addShaderFactories = testObject.GetComponent<AddShaderFactories>();
+            Assert.IsNotNull(addShaderFactories);
+        }
+
+
+
+
+
+        [UnityTest]
+        public IEnumerator AddTestFor20Seconds()
+        {
+
+
 
             float[] A = new float[] { 1.0f, 2.0f, 3.0f };
             float[] B = new float[] { 1.0f, 2.0f, 3.0f };
 
-            float[] Result = addShaderWrapper.RunAddTest();
+            float[] Result = new float[A.Length];
+
+            VectorAddWrapper vectorAdder = addShaderFactories.VectorAddWrapperFactory(A.Length);
+
+
 
             var comparer = new UnityEngine.TestTools.Utils.FloatEqualityComparer(10e-6f);
 
-            while (true)
+            while (Time.realtimeSinceStartup < 20.0f)
             {
-                for (int i = 0; i < A.Length; i++)
-                {
-                    Assert.That(Result[i], Is.EqualTo(A[i] + B[i]).Using(comparer));
+                Result = vectorAdder.AddVectors(A, B);
 
-                }
-                if (Time.realtimeSinceStartup > 5.0f)
-                {
-                    Assert.Fail("reached time out after 5 seconds!");
-                }
                 yield return new WaitForFixedUpdate();
             }
+
+            for (int i = 0; i < A.Length; i++)
+            {
+                Assert.That(Result[i], Is.EqualTo(A[i] + B[i]).Using(comparer));
+
+            }
+            yield return null;
         }
 
 
-        [UnityTest]
-        public IEnumerator AddTestOnce()
+        [Test]
+        public void AddTestOnce()
         {
-            var testObject = GameObject.Find("AddShaderTest");
-            Assert.IsNotNull(testObject);
 
-            AddShaderWrapper addShaderWrapper = testObject.GetComponent<AddShaderWrapper>();
 
-            float[] A = new float[] { 1.0f, 2.0f, 3.0f };
-            float[] B = new float[] { 1.0f, 2.0f, 3.0f };
 
-            float[] Result = addShaderWrapper.RunAddTest();
+
+
+            int ArrayDim = 10_000_000;
+
+            float[] A = new float[ArrayDim];
+            float[] B = new float[ArrayDim];
+
+            for(int i=0; i < ArrayDim; i++)
+            {
+                A[i] = i;
+                B[i] = i * i;
+            }
+
+            VectorAddWrapper vectorAdder = addShaderFactories.VectorAddWrapperFactory(A.Length);
+
+            float[] Result = vectorAdder.AddVectors(A, B);
 
             var comparer = new UnityEngine.TestTools.Utils.FloatEqualityComparer(10e-6f);
 
@@ -67,9 +102,16 @@ namespace Tests
                 Assert.That(Result[i], Is.EqualTo(A[i] + B[i]).Using(comparer));
 
             }
-
-            yield return null;
+            Debug.Log("Exiting the AddTestOnce");
         }
+
+
+        //[UnityTearDown]
+        //public IEnumerator UnLoadScene()
+        //{
+        //    yield return new ExitPlayMode();
+        //}
+
     }
 
 }

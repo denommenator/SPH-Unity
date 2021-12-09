@@ -13,16 +13,20 @@ namespace MyComputeKernel
 
         public _MyComputeBuffer(string name, int dim)
         {
+            
             _name = name;
             _ID = Shader.PropertyToID(name);
             _Dim = dim;
             _Buffer = new ComputeBuffer(_Dim, sizeof(float));
+
+            Debug.Log("Creating the buffer: " + _name);
         }
 
         public static implicit operator ComputeBuffer(_MyComputeBuffer b) => b._Buffer;
 
         ~_MyComputeBuffer()
         {
+            Debug.Log( "Destroying the buffer:" + _name);
             _Buffer.Release();
         }
 
@@ -98,10 +102,15 @@ namespace MyComputeKernel
 
         }
 
-        public void AddEmptyBuffer(string codeName, int dim)
+        public void CreateBuffer(string codeName, int dim)
         {
             _MyComputeBuffer buffer = new _MyComputeBuffer(codeName, dim);
             _computeBuffers.Add(codeName, buffer);
+        }
+
+        public void FillBuffer(string codeName, float[] A)
+        {
+            _computeBuffers[codeName].SetData(A);
         }
 
         public void AddGlobalConstantInt(string codeName, int inputValue)
