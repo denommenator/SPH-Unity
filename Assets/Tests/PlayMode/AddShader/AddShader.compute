@@ -1,0 +1,64 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel VectorAdd
+#pragma kernel VectorSum
+#define thread_group_dim_x 512
+// Global variables
+
+StructuredBuffer<float> _A;
+StructuredBuffer<float> _B;
+
+RWStructuredBuffer<float> _Add_Result;
+uint _ArrayDim;
+
+
+
+RWStructuredBuffer<float> _Block_Sums;
+
+
+//This is passed in by ComputeKernel abstraction, and gives the 
+//number of blocks launched in each dimension
+//It must exist!
+uint3 grid_dim;
+
+[numthreads(thread_group_dim_x,1,1)]
+void VectorAdd (uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    //Grid stride loop! Big catch here is that you can't access
+    //the number of groups that were launched without setting it as a constant variable
+    for (uint idx = thread_group_dim_x * group_id.x + thread_id.x;
+        idx < _ArrayDim;
+        idx += grid_dim.x * thread_group_dim_x  //the grid size, no SV variable to tell you how many groups were launched!
+        )
+    {
+        _Add_Result[idx] = _A[idx] + _B[idx];
+    }
+
+
+
+}
+
+
+[numthreads(thread_group_dim_x, 1, 1)]
+void VectorSum(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    //Grid stride loop! Big catch here is that you can't access
+    //the number of groups that were launched without setting it as a constant variable
+    for (uint idx = thread_group_dim_x * group_id.x + thread_id.x;
+        idx < _ArrayDim;
+        idx += grid_dim.x * thread_group_dim_x  //the grid size, no SV variable to tell you how many groups were launched!
+        )
+    {
+        
+    }
+
+    if (thread_id.x == 0)
+    {
+
+    }
+
+
+
+}
+
+
+

@@ -35,7 +35,7 @@ namespace MyComputeKernel
 
         public static implicit operator ComputeBuffer(_MyComputeBuffer b) => b._Buffer;
 
-        ~_MyComputeBuffer()
+        public void Destroy()
         {
             Debug.Log( "Destroying the buffer:" + _name);
             _Buffer.Release();
