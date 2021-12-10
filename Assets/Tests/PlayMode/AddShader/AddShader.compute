@@ -64,19 +64,20 @@ void VectorSum(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
 
     
 
-    AllMemoryBarrierWithGroupSync();
+    //I was warned by MS HLSL docs not to use this due to portability...
+    GroupMemoryBarrierWithGroupSync();
 
-//    uint i = group_dim.x / 2;
-//    while(i != 0)
-//    {
-//        if(thread_id.x < i)
-//        {
-//            thread_shared_cache[thread_id.x] += thread_shared_cache[thread_id.x + i];
-//        }
-//        AllMemoryBarrierWithGroupSync();
-//        i /= 2;
-//    }
-//
+    uint i = group_dim.x / 2;
+    while(i != 0)
+    {
+        if(thread_id.x < i)
+        {
+            thread_shared_cache[thread_id.x] += thread_shared_cache[thread_id.x + i];
+        }
+        GroupMemoryBarrierWithGroupSync();
+        i /= 2;
+    }
+
     if (thread_id.x == 0)
     {
         _Block_Sums[group_id.x] = thread_shared_cache[0];
