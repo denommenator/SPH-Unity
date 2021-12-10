@@ -28,7 +28,7 @@ public class VectorAddWrapper
         _vectorAddKernel.FillBuffer("_A", A);
         _vectorAddKernel.FillBuffer("_B", B);
 
-        _vectorAddKernel.Dispatch(1024, 1, 1);
+        _vectorAddKernel.Dispatch(10000, 1, 1);
 
         return _vectorAddKernel.GetBufferData("_Result");
 
