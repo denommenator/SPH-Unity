@@ -34,5 +34,9 @@ public class VectorAddWrapper
 
     }
 
+    public void ReleaseBuffers()
+    {
+        _vectorAddKernel.ReleaseBuffers();
+    }
 
 }

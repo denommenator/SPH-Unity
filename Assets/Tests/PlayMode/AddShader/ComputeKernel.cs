@@ -20,7 +20,6 @@ namespace MyComputeKernel
             _Dim = dim;
             InitializeBuffer(dim);
 
-            Debug.Log("Creating the buffer: " + _name);
         }
 
         public _MyComputeBuffer(string name)
@@ -33,12 +32,16 @@ namespace MyComputeKernel
             Debug.Log("Creating the uninitialized buffer: " + _name);
         }
 
+
         public static implicit operator ComputeBuffer(_MyComputeBuffer b) => b._Buffer;
 
-        public void Destroy()
+        ~_MyComputeBuffer()
         {
-            Debug.Log( "Destroying the buffer:" + _name);
-            _Buffer.Release();
+            if (_Buffer.IsValid())
+            {
+                Debug.Log("Are you sure you meant to not release this buffer?!" + _name);
+                _Buffer.Release();
+            }
         }
 
         public int ID => _ID;
@@ -60,6 +63,11 @@ namespace MyComputeKernel
             float[] array = new float[_Dim];
             _Buffer.GetData(array);
             return array;
+        }
+
+        public void Release()
+        {
+            _Buffer.Release();
         }
 
 
@@ -257,6 +265,14 @@ namespace MyComputeKernel
         public float[] GetBufferData(string codeName)
         {
             return _computeBuffers[codeName].GetData();
+        }
+
+        public void ReleaseBuffers()
+        {
+            foreach(_MyComputeBuffer b in _computeBuffers.Values)
+            {
+                b.Release();
+            }
         }
 
     }

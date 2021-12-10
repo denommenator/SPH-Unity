@@ -68,6 +68,8 @@ namespace Tests
                 Assert.That(Result[i], Is.EqualTo(A[i] + B[i]).Using(comparer));
 
             }
+
+            vectorAdder.ReleaseBuffers();
             yield return null;
         }
 
@@ -99,7 +101,8 @@ namespace Tests
                 Assert.That(Result[i], Is.EqualTo(A[i] + B[i]).Using(comparer));
 
             }
-            Debug.Log("Exiting the AddTestOnce");
+
+            vectorAdder.ReleaseBuffers();
         }
 
 
