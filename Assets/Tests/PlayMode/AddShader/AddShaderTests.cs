@@ -125,11 +125,10 @@ namespace Tests
 
             var comparer = new UnityEngine.TestTools.Utils.FloatEqualityComparer(10e-6f);
 
-
             Assert.That(Result, Is.EqualTo(A.Sum()).Using(comparer));
 
+            vectorSummer.ReleaseBuffers();
             
-            Debug.Log("Exiting the AddTestOnce");
         }
 
 

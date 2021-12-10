@@ -1,7 +1,9 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel VectorAdd
 #pragma kernel VectorSum
-#define thread_group_dim_x 512
+
+#define group_dim_pow_2 256
+
 // Global variables
 
 StructuredBuffer<float> _A;
@@ -12,22 +14,29 @@ uint _ArrayDim;
 
 
 
+
 RWStructuredBuffer<float> _Block_Sums;
+
+groupshared float thread_shared_cache[group_dim_pow_2];
 
 
 //This is passed in by ComputeKernel abstraction, and gives the 
 //number of blocks launched in each dimension
 //It must exist!
 uint3 grid_dim;
+uint3 group_dim;
 
-[numthreads(thread_group_dim_x,1,1)]
+[numthreads(256,1,1)]
 void VectorAdd (uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
 {
+    
+    
     //Grid stride loop! Big catch here is that you can't access
     //the number of groups that were launched without setting it as a constant variable
-    for (uint idx = thread_group_dim_x * group_id.x + thread_id.x;
+
+    for (uint idx = group_dim.x * group_id.x + thread_id.x;
         idx < _ArrayDim;
-        idx += grid_dim.x * thread_group_dim_x  //the grid size, no SV variable to tell you how many groups were launched!
+        idx += grid_dim.x * group_dim.x  //the grid size, no SV variable to tell you how many groups were launched!
         )
     {
         _Add_Result[idx] = _A[idx] + _B[idx];
@@ -38,22 +47,39 @@ void VectorAdd (uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
 }
 
 
-[numthreads(thread_group_dim_x, 1, 1)]
+[numthreads(group_dim_pow_2, 1, 1)]
 void VectorSum(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
 {
-    //Grid stride loop! Big catch here is that you can't access
-    //the number of groups that were launched without setting it as a constant variable
-    for (uint idx = thread_group_dim_x * group_id.x + thread_id.x;
+    float temp = 0.0f;
+
+    for (uint idx = group_dim.x * group_id.x + thread_id.x;
         idx < _ArrayDim;
-        idx += grid_dim.x * thread_group_dim_x  //the grid size, no SV variable to tell you how many groups were launched!
+        idx += grid_dim.x * group_dim.x 
         )
     {
-        
+        temp += _A[idx];
     }
 
+    thread_shared_cache[thread_id.x] = temp;
+
+    
+
+    AllMemoryBarrierWithGroupSync();
+
+//    uint i = group_dim.x / 2;
+//    while(i != 0)
+//    {
+//        if(thread_id.x < i)
+//        {
+//            thread_shared_cache[thread_id.x] += thread_shared_cache[thread_id.x + i];
+//        }
+//        AllMemoryBarrierWithGroupSync();
+//        i /= 2;
+//    }
+//
     if (thread_id.x == 0)
     {
-
+        _Block_Sums[group_id.x] = thread_shared_cache[0];
     }
 
 

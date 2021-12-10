@@ -29,7 +29,6 @@ namespace MyComputeKernel
             _ID = Shader.PropertyToID(name);
             _Dim = 0;
 
-            Debug.Log("Creating the uninitialized buffer: " + _name);
         }
 
 
@@ -180,6 +179,7 @@ namespace MyComputeKernel
             _globalFloats = new Dictionary<string, _MyGlobalFloat>();
 
             _globalInt3s.Add("grid_dim", new _MyGlobalInt3("grid_dim", new Vector3Int(1,1,1)));
+            _globalInt3s.Add("block_dim", new _MyGlobalInt3("block_dim", new Vector3Int(1, 1, 1)));
         }
 
 
@@ -232,7 +232,14 @@ namespace MyComputeKernel
             _MyGlobalInt3 grid_dim = new _MyGlobalInt3("grid_dim", new Vector3Int(x, y, z));
             _globalInt3s["grid_dim"] = grid_dim; //accessors return a copy of the struct, so can't modify in place
 
-            foreach(_MyComputeBuffer buffer in _computeBuffers.Values)
+            uint group_dim_x, group_dim_y, group_dim_z;
+            _computeShader.GetKernelThreadGroupSizes(_kernelNameID, out group_dim_x, out group_dim_y, out group_dim_z);
+            _MyGlobalInt3 block_dim = new _MyGlobalInt3("block_dim", new Vector3Int((int)group_dim_x, (int)group_dim_y, (int)group_dim_z));
+            _globalInt3s["block_dim"] = block_dim; //accessors return a copy of the struct, so can't modify in place
+
+
+
+            foreach (_MyComputeBuffer buffer in _computeBuffers.Values)
             {
                 _computeShader.SetBuffer(_kernelNameID, buffer.ID, buffer);
             }
