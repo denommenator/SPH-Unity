@@ -110,13 +110,13 @@ namespace Tests
         public void SumTest()
         {
 
-            int ArrayDim = 100;
+            int ArrayDim = 10_000;
 
             float[] A = new float[ArrayDim];
 
             for (int i = 0; i < ArrayDim; i++)
             {
-                A[i] = i + 1;
+                A[i] = 1.0f;
             }
 
             VectorSumWrapper vectorSummer = addShaderFactories.VectorSumWrapperFactory(A.Length);
@@ -125,7 +125,7 @@ namespace Tests
 
             var comparer = new UnityEngine.TestTools.Utils.FloatEqualityComparer(10e-6f);
 
-            Assert.That(Result, Is.EqualTo(A.Sum()).Using(comparer));
+            Assert.That(Result, Is.EqualTo(ArrayDim).Using(comparer));
 
             vectorSummer.ReleaseBuffers();
             

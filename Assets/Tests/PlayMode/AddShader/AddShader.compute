@@ -2,7 +2,7 @@
 #pragma kernel VectorAdd
 #pragma kernel VectorSum
 
-#define group_dim_pow_2 256
+#define group_dim_pow_2 512
 
 // Global variables
 
@@ -16,6 +16,7 @@ uint _ArrayDim;
 
 
 RWStructuredBuffer<float> _Block_Sums;
+RWStructuredBuffer<float> _Sum;
 
 groupshared float thread_shared_cache[group_dim_pow_2];
 
@@ -83,6 +84,21 @@ void VectorSum(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
         _Block_Sums[group_id.x] = thread_shared_cache[0];
     }
 
+    AllMemoryBarrierWithGroupSync();
+    //Cop out, just have one thread add all the elements in global memory together.
+    //This means small number of blocks might be beneficial
+    //huh... it isn't working
+    //maybe need an indirect here :-/
+    float temp2 = 0.0f;
+    if(group_id.x == 0 && thread_id.x == 0)
+    {
+        for(uint j = 0; j < grid_dim.x; j++)
+        {
+            temp2 += _Block_Sums[j];
+        }
+
+        _Sum[0] = temp2;
+    }
 
 
 }

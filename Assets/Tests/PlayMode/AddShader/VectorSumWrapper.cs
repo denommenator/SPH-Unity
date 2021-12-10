@@ -21,7 +21,7 @@ public class VectorSumWrapper
 
         _vectorSumKernel.CreateBuffer("_A", _ArrayDim);
         _vectorSumKernel.CreateUninitializedBuffer("_Block_Sums");
-        //_vectorSumKernel.CreateUninitializedBuffer("_Shared_Thread_Sums");
+        _vectorSumKernel.CreateBuffer("_Sum", 1);
 
     }
 
@@ -33,9 +33,13 @@ public class VectorSumWrapper
 
         _vectorSumKernel.Dispatch(nBlocks, 1, 1);
 
-        float[] sum_array = _vectorSumKernel.GetBufferData("_Block_Sums");
+        float[] sum_array = _vectorSumKernel.GetBufferData("_Sum");
+        float[] block_sum_array = _vectorSumKernel.GetBufferData("_Block_Sums");
 
-        return sum_array.Sum();
+        return sum_array[0];
+
+            //total cop out!
+        //return block_sum_array.Sum();
 
     }
 
