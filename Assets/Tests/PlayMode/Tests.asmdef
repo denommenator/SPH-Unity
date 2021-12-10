@@ -1,11 +1,10 @@
 {
-    "name": "PlayMode",
+    "name": "Tests",
     "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
-        "Move",
-        "TestShaders"
+        "AddShaderTests"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -9,6 +9,6 @@ EditorBuildSettings:
     path: Assets/Scenes/TestsScene.unity
     guid: fc1f7a2dd2c20ef4298b6a2e18e0dba2
   - enabled: 1
-    path: Assets/Tests/PlayMode/AddShaderTests.unity
+    path: Assets/Tests/PlayMode/AddShader/AddShaderTests.unity
     guid: cdc4e487599cd43e1905e15481e091e8
   m_configObjects: {}

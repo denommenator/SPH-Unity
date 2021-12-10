@@ -4,6 +4,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEditor;
+using System.Linq;
 
 namespace Tests
 {
@@ -75,10 +76,6 @@ namespace Tests
         public void AddTestOnce()
         {
 
-
-
-
-
             int ArrayDim = 10_000_000;
 
             float[] A = new float[ArrayDim];
@@ -102,6 +99,33 @@ namespace Tests
                 Assert.That(Result[i], Is.EqualTo(A[i] + B[i]).Using(comparer));
 
             }
+            Debug.Log("Exiting the AddTestOnce");
+        }
+
+
+        [Test]
+        public void SumTest()
+        {
+
+            int ArrayDim = 100;
+
+            float[] A = new float[ArrayDim];
+
+            for (int i = 0; i < ArrayDim; i++)
+            {
+                A[i] = i + 1;
+            }
+
+            VectorSumWrapper vectorSummer = addShaderFactories.VectorSumWrapperFactory(A.Length);
+
+            float Result = vectorSummer.SumVector(A);
+
+            var comparer = new UnityEngine.TestTools.Utils.FloatEqualityComparer(10e-6f);
+
+
+            Assert.That(Result, Is.EqualTo(A.Sum()).Using(comparer));
+
+            
             Debug.Log("Exiting the AddTestOnce");
         }
 

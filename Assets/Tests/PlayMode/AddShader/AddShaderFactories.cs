@@ -18,6 +18,13 @@ public class AddShaderFactories : MonoBehaviour
         return vectorAdder;
     }
 
+    public VectorSumWrapper VectorSumWrapperFactory(int arrayDim)
+    {
+        VectorSumWrapper vectorSummer = new VectorSumWrapper(addShader, arrayDim);
+
+        return vectorSummer;
+    }
+
 }
 
 

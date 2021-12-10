@@ -20,7 +20,7 @@ public class VectorAddWrapper
 
         _vectorAddKernel.CreateBuffer("_A", _ArrayDim);
         _vectorAddKernel.CreateBuffer("_B", _ArrayDim);
-        _vectorAddKernel.CreateBuffer("_Result", _ArrayDim);
+        _vectorAddKernel.CreateBuffer("_Add_Result", _ArrayDim);
     }
 
     public float[] AddVectors(float[] A, float[] B)
@@ -28,9 +28,9 @@ public class VectorAddWrapper
         _vectorAddKernel.FillBuffer("_A", A);
         _vectorAddKernel.FillBuffer("_B", B);
 
-        _vectorAddKernel.Dispatch(10000, 1, 1);
+        _vectorAddKernel.Dispatch(100, 1, 1);
 
-        return _vectorAddKernel.GetBufferData("_Result");
+        return _vectorAddKernel.GetBufferData("_Add_Result");
 
     }
 
