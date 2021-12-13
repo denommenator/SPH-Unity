@@ -11,10 +11,16 @@ public class GroupMemoryTests : MonoBehaviour
     void Start()
     {
         ComputeBuffer result_buffer = new ComputeBuffer(2, sizeof(int));
-        ComputeBuffer read_buffer = new ComputeBuffer(2, sizeof(int));
+        ComputeBuffer read_buffer = new ComputeBuffer(64, sizeof(int));
+
+        int[] A = new int[64];
+        for(int i=0; i<64; i++)
+        {
+            A[i] = 0;
+        }
 
         result_buffer.SetData(new int[] { 5, 5 });
-        read_buffer.SetData(new int[] { 5, 5 });
+        read_buffer.SetData(A);
 
 
         int kernelID = group_memory_tester.FindKernel("GroupMemoryTest");

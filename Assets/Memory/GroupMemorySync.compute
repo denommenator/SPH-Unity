@@ -6,9 +6,10 @@ globallycoherent RWStructuredBuffer<int> my_global_array;
 RWStructuredBuffer<int> read_result;
 
 //each group only contains 1 thread
-[numthreads(1, 1, 1)]
-void GroupMemoryTest(uint3 group_id : SV_GroupID)
+[numthreads(64, 1, 1)]
+void GroupMemoryTest(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
 {
+	
 	my_global_array[group_id.x] = group_id.x;
 
 	//every memory barrier I could find
@@ -19,14 +20,16 @@ void GroupMemoryTest(uint3 group_id : SV_GroupID)
 	GroupMemoryBarrierWithGroupSync();
 	GroupMemoryBarrier();
 
-	if (group_id.x == 0)
+	if (group_id.x == 0 && thread_id.x == 0)
 	{
 		read_result[1] = my_global_array[1];
 	}
 
-	if(group_id.x == 1)
+	if(group_id.x == 1 && thread_id.x == 0)
 	{
 		read_result[0] = my_global_array[0];
 	}
+
+
 
 }
