@@ -2,11 +2,11 @@
 #pragma kernel GroupMemoryTest
 
 
-globallycoherent RWStructuredBuffer<int> my_global_array;
-RWStructuredBuffer<int> read_result;
+globallycoherent RWStructuredBuffer<float> my_global_array;
+RWStructuredBuffer<float> read_result;
 
 //each group only contains 1 thread
-[numthreads(64, 1, 1)]
+[numthreads(1, 1, 1)]
 void GroupMemoryTest(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
 {
 	

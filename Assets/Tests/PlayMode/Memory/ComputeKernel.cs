@@ -5,36 +5,38 @@ using UnityEngine;
 
 namespace MyComputeKernel
 {
-    class _MyComputeBuffer
+    public class MyComputeBuffer : MonoBehaviour
     {
         private string _name;
         private int _ID;
         private int _Dim;
         private ComputeBuffer _Buffer;
 
-        public _MyComputeBuffer(string name, int dim)
+        public static MyComputeBuffer NewMyComputeBuffer(string name, int dim)
         {
-            
-            _name = name;
-            _ID = Shader.PropertyToID(name);
-            _Dim = dim;
-            InitializeBuffer(dim);
+            MyComputeBuffer cb = new MyComputeBuffer();
+
+            cb._name = name;
+            cb._ID = Shader.PropertyToID(name);
+            cb._Dim = dim;
+            cb.InitializeBuffer(dim);
+            return cb;
 
         }
 
-        public _MyComputeBuffer(string name)
+        public static MyComputeBuffer NewMyComputeBuffer(string name)
         {
-
-            _name = name;
-            _ID = Shader.PropertyToID(name);
-            _Dim = 0;
-
+            MyComputeBuffer cb = new MyComputeBuffer();
+            cb._name = name;
+            cb._ID = Shader.PropertyToID(name);
+            cb._Dim = 0;
+            return cb;
         }
 
 
-        public static implicit operator ComputeBuffer(_MyComputeBuffer b) => b._Buffer;
+        public static implicit operator ComputeBuffer(MyComputeBuffer b) => b._Buffer;
 
-        ~_MyComputeBuffer()
+        public void OnDestroy()
         {
             if (_Buffer.IsValid())
             {
@@ -152,11 +154,14 @@ namespace MyComputeKernel
 
     }
 
-    class ComputeKernel
+    public class ComputeKernel : MonoBehaviour
     {
         private ComputeShader _computeShader;
         private string _kernelName;
         private int _kernelNameID;
+
+        public int _groupDim_x = 1, _groupDim_y = 1, _groupDim_z = 1;
+
         
 
         private Dictionary<string, _MyGlobalInt> _globalConstantInts;
@@ -164,54 +169,63 @@ namespace MyComputeKernel
         private Dictionary<string, _MyGlobalInt3> _globalInt3s;
         private Dictionary<string, _MyGlobalFloat> _globalFloats;
 
-        private Dictionary<string, _MyComputeBuffer> _computeBuffers;
+        public Dictionary<string, MyComputeBuffer> computeBuffers;
 
-
-        public ComputeKernel(ComputeShader computeShader, string kernelName)
+        public void Start()
         {
-            _computeShader = computeShader;
-            _kernelName = kernelName;
-            _kernelNameID = _computeShader.FindKernel(kernelName);
-            _computeBuffers = new Dictionary<string, _MyComputeBuffer>();
-            _globalConstantInts = new Dictionary<string, _MyGlobalInt>();
-            _globalInts = new Dictionary<string, _MyGlobalInt>();
-            _globalInt3s = new Dictionary<string, _MyGlobalInt3>();
-            _globalFloats = new Dictionary<string, _MyGlobalFloat>();
+            
+        }
 
-            _globalInt3s.Add("grid_dim", new _MyGlobalInt3("grid_dim", new Vector3Int(1,1,1)));
-            _globalInt3s.Add("block_dim", new _MyGlobalInt3("block_dim", new Vector3Int(1, 1, 1)));
+        public static ComputeKernel NewComputeKernel(ComputeShader computeShader, string kernelName)
+        {
+            ComputeKernel ck = new ComputeKernel();
+
+            ck._computeShader = computeShader;
+            ck._kernelName = kernelName;
+            ck._kernelNameID = computeShader.FindKernel(kernelName);
+            ck.computeBuffers = new Dictionary<string, MyComputeBuffer>();
+            ck._globalConstantInts = new Dictionary<string, _MyGlobalInt>();
+            ck._globalInts = new Dictionary<string, _MyGlobalInt>();
+            ck._globalInt3s = new Dictionary<string, _MyGlobalInt3>();
+            ck._globalFloats = new Dictionary<string, _MyGlobalFloat>();
+            
+            ck._globalInt3s.Add("grid_dim", new _MyGlobalInt3("grid_dim", new Vector3Int(1,1,1)));
+            ck._globalInt3s.Add("block_dim", new _MyGlobalInt3("block_dim", new Vector3Int(1, 1, 1)));
+
+
+            return ck;
         }
 
 
 
         public void AddBufferAndFill(string codeName, float[] inputArray)
         {
-            _MyComputeBuffer buffer = new _MyComputeBuffer(codeName, inputArray.Length);
+            MyComputeBuffer buffer = MyComputeBuffer.NewMyComputeBuffer(codeName, inputArray.Length);
             buffer.SetData(inputArray);
-            _computeBuffers.Add(codeName, buffer);
+            computeBuffers.Add(codeName, buffer);
 
         }
 
         public void CreateUninitializedBuffer(string codeName)
         {
-            _MyComputeBuffer buffer = new _MyComputeBuffer(codeName);
-            _computeBuffers.Add(codeName, buffer);
+            MyComputeBuffer buffer = MyComputeBuffer.NewMyComputeBuffer(codeName);
+            computeBuffers.Add(codeName, buffer);
         }
 
         public void CreateBuffer(string codeName, int dim)
         {
-            _MyComputeBuffer buffer = new _MyComputeBuffer(codeName, dim);
-            _computeBuffers.Add(codeName, buffer);
+            MyComputeBuffer buffer = MyComputeBuffer.NewMyComputeBuffer(codeName, dim);
+            computeBuffers.Add(codeName, buffer);
         }
 
         public void InitializeBuffer(string codeName, int dim)
         {
-            _computeBuffers[codeName].InitializeBuffer(dim);
+            computeBuffers[codeName].InitializeBuffer(dim);
         }
 
         public void FillBuffer(string codeName, float[] A)
         {
-            _computeBuffers[codeName].SetData(A);
+            computeBuffers[codeName].SetData(A);
         }
 
         public void AddGlobalConstantInt(string codeName, int inputValue)
@@ -227,8 +241,9 @@ namespace MyComputeKernel
             _globalFloats.Add(codeName, myFloat);
         }
 
-        public void Dispatch(int x, int y, int z)
+        public void Dispatch()
         {
+            int x = _groupDim_x, y = _groupDim_y, z = _groupDim_z;
             _MyGlobalInt3 grid_dim = new _MyGlobalInt3("grid_dim", new Vector3Int(x, y, z));
             _globalInt3s["grid_dim"] = grid_dim; //accessors return a copy of the struct, so can't modify in place
 
@@ -239,7 +254,7 @@ namespace MyComputeKernel
 
 
 
-            foreach (_MyComputeBuffer buffer in _computeBuffers.Values)
+            foreach (MyComputeBuffer buffer in computeBuffers.Values)
             {
                 _computeShader.SetBuffer(_kernelNameID, buffer.ID, buffer);
             }
@@ -263,6 +278,7 @@ namespace MyComputeKernel
             _computeShader.Dispatch(_kernelNameID, x, y, z);
         }
 
+
         //oh god, there is no GetFloat...
         //public float GetFloat(string codeName)
         //{
@@ -271,16 +287,9 @@ namespace MyComputeKernel
 
         public float[] GetBufferData(string codeName)
         {
-            return _computeBuffers[codeName].GetData();
+            return computeBuffers[codeName].GetData();
         }
 
-        public void ReleaseBuffers()
-        {
-            foreach(_MyComputeBuffer b in _computeBuffers.Values)
-            {
-                b.Release();
-            }
-        }
 
     }
 }

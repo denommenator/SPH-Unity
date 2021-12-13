@@ -1,0 +1,85 @@
+
+float3 _Positions;
+float3 _ReorderedPositions;
+
+float3 _SimulationGridLowerBounds;
+float3 _SimulationGridUpperBounds;
+
+int3 _SimulationGridCellCount;
+
+uint _NParticles;
+
+//cells are cubes, and they evenly divide the grid lower/upper bounds
+float _CellSize;
+
+//indexed by cells
+RWStructuredBuffer<int> _CellHistogram;
+RWStructuredBuffer<int> _CellOffsets;
+
+//indexed by particles
+//When we move the particles to their new storage locations,
+//new index(p) = celloffset of cell(p) + particleoffset(p)
+RWStructuredBuffer<int> _ParticleCellRelativeOffsets
+RWStructuredBuffer<int3> _ParticleCell
+RWStructuredBuffer<int> _ParticleOverallOffsets
+
+//This is passed in by ComputeKernel abstraction, and gives the 
+//number of blocks launched in each dimension
+//It must exist!
+uint3 grid_dim;
+uint3 group_dim;
+
+
+[numthreads(1,1,1)]
+void BuildHistogram(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    //grid stride loop
+    for (uint idx = group_dim.x * group_id.x + thread_id.x;
+        idx < _NParticles;
+        idx += grid_dim.x * group_dim.x
+        )
+    {
+        uint3 cell_p = get_cell(_Positions[idx]);
+        _ParticleCell[idx] = cell_p;
+        int old_cell_count;
+        InterlockedAdd(_CellHistogram[cell_histogram_index(cell_p)], 1, old_cell_count);
+        _ParticleCellRelativeOffsets[idx] = old_cell_count;
+
+    }
+}
+
+
+[numthreads(1, 1, 1)]
+void Prefix_Sum(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    //_CellOffsets = prefix sum _Histogram
+}
+
+[numthreads(1, 1, 1)]
+void CalculateOverallOffsets(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    //grid stride loop
+    for (uint idx = group_dim.x * group_id.x + thread_id.x;
+        idx < _NParticles;
+        idx += grid_dim.x * group_dim.x
+        )
+    {
+        cell_p = _ParticleCell[idx];
+        _ParticleOverallOffsets[idx] = _CellOffsets[cell_histogram_index(cell_p)] + _ParticleCellRelativeOffsets[idx];
+
+    }
+}
+
+
+[numthreads(1, 1, 1)]
+void ReorderParticles(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    //grid stride loop
+    for (uint idx = group_dim.x * group_id.x + thread_id.x;
+        idx < _NParticles;
+        idx += grid_dim.x * group_dim.x
+        )
+    {
+        _ReorderedPositions[_ParticleOverallOffsets[idx]] = _Positions[idx];
+    }
+}
