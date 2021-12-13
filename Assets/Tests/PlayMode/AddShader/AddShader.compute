@@ -15,7 +15,7 @@ uint _ArrayDim;
 
 
 
-RWStructuredBuffer<float> _Block_Sums;
+globallycoherent RWStructuredBuffer<float> _Block_Sums;
 RWStructuredBuffer<float> _Sum;
 
 groupshared float thread_shared_cache[group_dim_pow_2];
@@ -84,11 +84,17 @@ void VectorSum(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
         _Block_Sums[group_id.x] = thread_shared_cache[0];
     }
 
+    DeviceMemoryBarrier();
+    DeviceMemoryBarrierWithGroupSync();
+    AllMemoryBarrier();
     AllMemoryBarrierWithGroupSync();
+    GroupMemoryBarrierWithGroupSync();
+    GroupMemoryBarrier();
+
     //Cop out, just have one thread add all the elements in global memory together.
     //This means small number of blocks might be beneficial
-    //huh... it isn't working
-    //maybe need an indirect here :-/
+    //huh... Even with the globallycoherent it still isn't syncing correctly on Mac.
+    //works on Windows!
     float temp2 = 0.0f;
     if(group_id.x == 0 && thread_id.x == 0)
     {

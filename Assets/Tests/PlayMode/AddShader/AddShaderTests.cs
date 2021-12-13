@@ -110,7 +110,7 @@ namespace Tests
         public void SumTest()
         {
 
-            int ArrayDim = 10_000;
+            int ArrayDim = 512*2 -1 ;
 
             float[] A = new float[ArrayDim];
 

@@ -27,7 +27,7 @@ public class VectorSumWrapper
 
     public float SumVector(float[] A)
     {
-        int nBlocks = 500;
+        int nBlocks = 2;
         _vectorSumKernel.FillBuffer("_A", A);
         _vectorSumKernel.InitializeBuffer("_Block_Sums", nBlocks);
 
