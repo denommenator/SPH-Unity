@@ -3,76 +3,83 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-namespace MyComputeKernel
+namespace MyComputeKernel1
 {
-    public class MyComputeBuffer : MonoBehaviour
+    public class ComputeBufferWrapper : MonoBehaviour
     {
-        private string _name;
-        private int _ID;
-        private int _Dim;
-        private ComputeBuffer _Buffer;
+        static private List<ComputeBuffer> _BufferPool;
 
-        public static MyComputeBuffer NewMyComputeBuffer(string name, int dim)
+        private int _bufferPoolIndex;
+        private int _BufferDim;
+        private int _BufferStride;
+
+
+        static ComputeBufferWrapper NewFloatBuffer(GameObject parentObject, float[] data)
         {
-            MyComputeBuffer cb = new MyComputeBuffer();
+            ComputeBufferWrapper bufferWrapper = parentObject.GetComponent<ComputeBufferWrapper>();
 
-            cb._name = name;
-            cb._ID = Shader.PropertyToID(name);
-            cb._Dim = dim;
-            cb.InitializeBuffer(dim);
-            return cb;
+            bufferWrapper._BufferDim = data.Length;
+            bufferWrapper._BufferStride = sizeof(float);
+            bufferWrapper._bufferPoolIndex = ComputeBufferWrapper._BufferPool.Count;
 
+            ComputeBuffer buffer = new ComputeBuffer(bufferWrapper._BufferDim, bufferWrapper._BufferStride);
+            buffer.SetData(data);
+            ComputeBufferWrapper._BufferPool.Add(buffer);
+
+            return bufferWrapper;
         }
 
-        public static MyComputeBuffer NewMyComputeBuffer(string name)
+        static ComputeBufferWrapper NewFloatBuffer(GameObject parentObject, int dim)
         {
-            MyComputeBuffer cb = new MyComputeBuffer();
-            cb._name = name;
-            cb._ID = Shader.PropertyToID(name);
-            cb._Dim = 0;
-            return cb;
+
+            float[] zero_initialized_data = new float[dim];
+            return NewFloatBuffer(parentObject, zero_initialized_data);
         }
 
+        public static implicit operator ComputeBuffer(ComputeBufferWrapper b) => ComputeBufferWrapper._BufferPool[b._bufferPoolIndex];
 
-        public static implicit operator ComputeBuffer(MyComputeBuffer b) => b._Buffer;
-
-        public void OnDestroy()
+        public void ReleaseBuffers()
         {
-            if (_Buffer.IsValid())
+            foreach(ComputeBuffer b in _BufferPool)
             {
-                Debug.Log("Are you sure you meant to not release this buffer?!" + _name);
-                _Buffer.Release();
+                b.Release();
             }
         }
 
-        public int ID => _ID;
+    }
 
-        public void InitializeBuffer(int dim)
-        {
-            _Dim = dim;
-            _Buffer = new ComputeBuffer(_Dim, sizeof(float));
-        }
+    public class KernelBufferField : MonoBehaviour
+    {
+        private string _codeName;
+        private ComputeBuffer _attachedBuffer;
 
-        public void SetData(float[] data)
-        {
-            _Buffer.SetData(data);
-        }
-        
 
-        public float[] GetData()
-        {
-            float[] array = new float[_Dim];
-            _Buffer.GetData(array);
-            return array;
-        }
+    }
 
-        public void Release()
+    public class KernelFields : MonoBehaviour
+    {
+        private Dictionary<string, _MyGlobalInt> _globalConstantInts;
+        private Dictionary<string, _MyGlobalInt> _globalInts;
+        private Dictionary<string, _MyGlobalInt3> _globalInt3s;
+        private Dictionary<string, _MyGlobalFloat> _globalFloats;
+
+        public Dictionary<string, ComputeBufferWrapper> computeBuffers;
+
+        public void InitializeKernelProperties()
         {
-            _Buffer.Release();
+            computeBuffers = new Dictionary<string, MyComputeBuffer>();
+            _globalConstantInts = new Dictionary<string, _MyGlobalInt>();
+            _globalInts = new Dictionary<string, _MyGlobalInt>();
+            _globalInt3s = new Dictionary<string, _MyGlobalInt3>();
+            _globalFloats = new Dictionary<string, _MyGlobalFloat>();
+
+            _globalInt3s.Add("grid_dim", new _MyGlobalInt3("grid_dim", new Vector3Int(1, 1, 1)));
+            _globalInt3s.Add("group_dim", new _MyGlobalInt3("group_dim", new Vector3Int(1, 1, 1)));
         }
 
 
     }
+
 
     struct _MyGlobalInt
     {
@@ -154,9 +161,11 @@ namespace MyComputeKernel
 
     }
 
-    public class ComputeKernel : MonoBehaviour
+    
+
+
+    public class ComputeKernel
     {
-        private ComputeShader _computeShader;
         private string _kernelName;
         private int _kernelNameID;
 
@@ -164,36 +173,22 @@ namespace MyComputeKernel
 
         
 
-        private Dictionary<string, _MyGlobalInt> _globalConstantInts;
-        private Dictionary<string, _MyGlobalInt> _globalInts;
-        private Dictionary<string, _MyGlobalInt3> _globalInt3s;
-        private Dictionary<string, _MyGlobalFloat> _globalFloats;
-
-        public Dictionary<string, MyComputeBuffer> computeBuffers;
+        
 
         public void Start()
         {
             
         }
 
-        public static ComputeKernel NewComputeKernel(ComputeShader computeShader, string kernelName)
+        public  ComputeKernel(ComputeShader computeShader, string kernelName)
         {
-            ComputeKernel ck = new ComputeKernel();
-
-            ck._computeShader = computeShader;
-            ck._kernelName = kernelName;
-            ck._kernelNameID = computeShader.FindKernel(kernelName);
-            ck.computeBuffers = new Dictionary<string, MyComputeBuffer>();
-            ck._globalConstantInts = new Dictionary<string, _MyGlobalInt>();
-            ck._globalInts = new Dictionary<string, _MyGlobalInt>();
-            ck._globalInt3s = new Dictionary<string, _MyGlobalInt3>();
-            ck._globalFloats = new Dictionary<string, _MyGlobalFloat>();
             
-            ck._globalInt3s.Add("grid_dim", new _MyGlobalInt3("grid_dim", new Vector3Int(1,1,1)));
-            ck._globalInt3s.Add("block_dim", new _MyGlobalInt3("block_dim", new Vector3Int(1, 1, 1)));
 
+            
+            _kernelName = kernelName;
+            _kernelNameID = computeShader.FindKernel(kernelName);
+            
 
-            return ck;
         }
 
 
@@ -241,14 +236,13 @@ namespace MyComputeKernel
             _globalFloats.Add(codeName, myFloat);
         }
 
-        public void Dispatch()
+        public void Dispatch(ComputeShader computeShader, int x, int y, int z)
         {
-            int x = _groupDim_x, y = _groupDim_y, z = _groupDim_z;
             _MyGlobalInt3 grid_dim = new _MyGlobalInt3("grid_dim", new Vector3Int(x, y, z));
             _globalInt3s["grid_dim"] = grid_dim; //accessors return a copy of the struct, so can't modify in place
 
             uint group_dim_x, group_dim_y, group_dim_z;
-            _computeShader.GetKernelThreadGroupSizes(_kernelNameID, out group_dim_x, out group_dim_y, out group_dim_z);
+            computeShader.GetKernelThreadGroupSizes(_kernelNameID, out group_dim_x, out group_dim_y, out group_dim_z);
             _MyGlobalInt3 block_dim = new _MyGlobalInt3("group_dim", new Vector3Int((int)group_dim_x, (int)group_dim_y, (int)group_dim_z));
             _globalInt3s["group_dim"] = block_dim; //accessors return a copy of the struct, so can't modify in place
 
@@ -256,26 +250,26 @@ namespace MyComputeKernel
 
             foreach (MyComputeBuffer buffer in computeBuffers.Values)
             {
-                _computeShader.SetBuffer(_kernelNameID, buffer.ID, buffer);
+                computeShader.SetBuffer(_kernelNameID, buffer.ID, buffer);
             }
 
             foreach (_MyGlobalInt i in _globalInts.Values)
             {
-                _computeShader.SetInt(i.ID, i);
+                computeShader.SetInt(i.ID, i);
             }
 
             foreach (_MyGlobalInt3 i3 in _globalInt3s.Values)
             {
-                _computeShader.SetInts(i3.ID, i3);
+                computeShader.SetInts(i3.ID, i3);
             }
 
             foreach (_MyGlobalFloat f in _globalFloats.Values)
             {
-                _computeShader.SetFloat(f.ID, f);
+                computeShader.SetFloat(f.ID, f);
             }
 
 
-            _computeShader.Dispatch(_kernelNameID, x, y, z);
+            computeShader.Dispatch(_kernelNameID, x, y, z);
         }
 
 

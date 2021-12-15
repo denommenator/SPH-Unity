@@ -2,35 +2,36 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+using MyComputeKernel1;
+
 public class GroupMemoryWrapper : MonoBehaviour
 {
     public ComputeShader computeShader;
     public Vector3Int dispatchGroupDimensions = new Vector3Int(1,1,1);
 
-    private MyComputeKernel.ComputeKernel groupMemoryTestKernel;
+    private ComputeKernel groupMemoryTestKernel;
+    private KernelFields kernelFields;
 
 
 
     // Start is called before the first frame update
     void Start()
     {
-        groupMemoryTestKernel = MyComputeKernel.ComputeKernel.NewComputeKernel(computeShader, "GroupMemoryTest");
-        groupMemoryTestKernel.CreateUninitializedBuffer("my_global_array");
-        groupMemoryTestKernel.CreateUninitializedBuffer("read_result");
+        groupMemoryTestKernel = gameObject.GetComponent<ComputeKernel>();
+        groupMemoryTestKernel.InitializeComputeKernel(computeShader, "GroupMemoryTest");
+
+        groupMemoryTestKernel.NewBufferVariable("my_global_array");
+        groupMemoryTestKernel.NewBufferVariable("read_result");
 
     }
 
-    public void Update()
+    public void InitializeGlobalArray(float[] A)
     {
-        groupMemoryTestKernel._groupDim_x = dispatchGroupDimensions.x;
-        groupMemoryTestKernel._groupDim_y = dispatchGroupDimensions.y;
-        groupMemoryTestKernel._groupDim_z = dispatchGroupDimensions.z;
 
     }
 
-    public ref MyComputeKernel.ComputeKernel GetKernel()
+    public void Dispatch()
     {
-        return ref groupMemoryTestKernel;
+        groupMemoryTestKernel.Dispatch(dispatchGroupDimensions.x, dispatchGroupDimensions.y, dispatchGroupDimensions.z);
     }
-
 }

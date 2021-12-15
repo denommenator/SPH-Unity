@@ -1,3 +1,4 @@
+#pragma kernel BuildHistogram
 
 float3 _Positions;
 float3 _ReorderedPositions;
