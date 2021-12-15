@@ -48,15 +48,35 @@ namespace MyComputeKernel1
 
     }
 
-    public class KernelBufferField : MonoBehaviour
+    public class KernelBufferField
     {
         private string _codeName;
-        private ComputeBuffer _attachedBuffer;
+        private ComputeBufferWrapper _attachedBuffer;
+        private int _dim;
+
+        public Instantiate(int dim)
+        {
+            _dim = dim;
+            _attachedBuffer = new ComputeBufferWrapper(dim, sizeof(float));
+        }
+
+        public static operator << (KernelBufferField bf, float[] A)
+        {
+            bf._attachedBuffer.SetData(A);
+        }
+
+        public static operator float[](KernelBufferField bf)
+        {
+            float[] data = new float[_dim];
+            //use a non-blocking call for this if doing anything other than testing
+            bf._attachedBuffer.GetData(data);
+        }
+
 
 
     }
 
-    public class KernelFields : MonoBehaviour
+    public class KernelFields
     {
         private Dictionary<string, _MyGlobalInt> _globalConstantInts;
         private Dictionary<string, _MyGlobalInt> _globalInts;
