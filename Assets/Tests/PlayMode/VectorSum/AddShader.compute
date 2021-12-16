@@ -1,0 +1,113 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel VectorAdd
+#pragma kernel VectorSum
+
+#define group_dim_pow_2 512
+
+// Global variables
+
+StructuredBuffer<float> _A;
+StructuredBuffer<float> _B;
+
+RWStructuredBuffer<float> _Add_Result;
+uint _ArrayDim;
+
+
+
+
+globallycoherent RWStructuredBuffer<float> _Block_Sums;
+RWStructuredBuffer<float> _Sum;
+
+groupshared float thread_shared_cache[group_dim_pow_2];
+
+
+//This is passed in by ComputeKernel abstraction, and gives the 
+//number of blocks launched in each dimension
+//It must exist!
+uint3 grid_dim;
+uint3 group_dim;
+
+[numthreads(256,1,1)]
+void VectorAdd (uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    
+    
+    //Grid stride loop! Big catch here is that you can't access
+    //the number of groups that were launched without setting it as a constant variable
+
+    for (uint idx = group_dim.x * group_id.x + thread_id.x;
+        idx < _ArrayDim;
+        idx += grid_dim.x * group_dim.x  //the grid size, no SV variable to tell you how many groups were launched!
+        )
+    {
+        _Add_Result[idx] = _A[idx] + _B[idx];
+    }
+
+
+
+}
+
+
+[numthreads(group_dim_pow_2, 1, 1)]
+void VectorSum(uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
+{
+    float temp = 0.0f;
+
+    for (uint idx = group_dim.x * group_id.x + thread_id.x;
+        idx < _ArrayDim;
+        idx += grid_dim.x * group_dim.x 
+        )
+    {
+        temp += _A[idx];
+    }
+
+    thread_shared_cache[thread_id.x] = temp;
+
+    
+
+    //I was warned by MS HLSL docs not to use this due to portability...
+    GroupMemoryBarrierWithGroupSync();
+
+    uint i = group_dim.x / 2;
+    while(i != 0)
+    {
+        if(thread_id.x < i)
+        {
+            thread_shared_cache[thread_id.x] += thread_shared_cache[thread_id.x + i];
+        }
+        GroupMemoryBarrierWithGroupSync();
+        i /= 2;
+    }
+
+    if (thread_id.x == 0)
+    {
+        _Block_Sums[group_id.x] = thread_shared_cache[0];
+    }
+
+    DeviceMemoryBarrier();
+    DeviceMemoryBarrierWithGroupSync();
+    AllMemoryBarrier();
+    AllMemoryBarrierWithGroupSync();
+    GroupMemoryBarrierWithGroupSync();
+    GroupMemoryBarrier();
+
+    //Cop out, just have one thread add all the elements in global memory together.
+    //This means small number of blocks might be beneficial
+    //huh... Even with the globallycoherent it still isn't syncing correctly on Mac.
+    //works on Windows!
+    float temp2 = 0.0f;
+    if(group_id.x == 0 && thread_id.x == 0)
+    {
+        for(uint j = 0; j < grid_dim.x; j++)
+        {
+            temp2 += _Block_Sums[j];
+        }
+
+        _Sum[0] = temp2;
+    }
+
+
+}
+
+
+

@@ -287,17 +287,7 @@ namespace MyComputeKernel1
                 field.PreDispatch(_computeShader, _kernelNameID);
             }
 
-
-        //_MyGlobalInt3 grid_dim = new _MyGlobalInt3("grid_dim", new Vector3Int(x, y, z));
-        //_globalInt3s["grid_dim"] = grid_dim; //accessors return a copy of the struct, so can't modify in place
-
-        //uint group_dim_x, group_dim_y, group_dim_z;
-        //computeShader.GetKernelThreadGroupSizes(_kernelNameID, out group_dim_x, out group_dim_y, out group_dim_z);
-        //_MyGlobalInt3 block_dim = new _MyGlobalInt3("group_dim", new Vector3Int((int)group_dim_x, (int)group_dim_y, (int)group_dim_z));
-        //_globalInt3s["group_dim"] = block_dim; //accessors return a copy of the struct, so can't modify in place
-
-
-        _computeShader.Dispatch(_kernelNameID, x, y, z);
+            _computeShader.Dispatch(_kernelNameID, x, y, z);
         }
 
 
