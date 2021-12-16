@@ -8,6 +8,7 @@ RWStructuredBuffer<float> read_result;
 //This is passed in by ComputeKernel abstraction, and gives the 
 //number of blocks launched in each dimension
 //It must exist!
+
 uint3 grid_dim;
 uint3 group_dim;
 
