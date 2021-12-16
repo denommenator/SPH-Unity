@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-namespace MyComputeKernel1
+namespace SPH
 {
     public class ComputeBufferWrapper
     {
@@ -27,6 +27,20 @@ namespace MyComputeKernel1
             }
         }
 
+        public ComputeBufferWrapper(int dim)
+        {
+
+            float[] zero_initialized_data = new float[dim];
+
+            _BufferDim = zero_initialized_data.Length;
+            _BufferStride = sizeof(float);
+            _bufferPoolIndex = ComputeBufferWrapper._BufferPool.Count;
+
+            ComputeBuffer buffer = new ComputeBuffer(_BufferDim, _BufferStride);
+            buffer.SetData(zero_initialized_data);
+            ComputeBufferWrapper._BufferPool.Add(buffer);
+        }
+
         public ComputeBufferWrapper(float[] data)
         {
             
@@ -41,19 +55,7 @@ namespace MyComputeKernel1
 
         }
 
-        public ComputeBufferWrapper(int dim)
-        {
 
-            float[] zero_initialized_data = new float[dim];
-
-            _BufferDim = zero_initialized_data.Length;
-            _BufferStride = sizeof(float);
-            _bufferPoolIndex = ComputeBufferWrapper._BufferPool.Count;
-
-            ComputeBuffer buffer = new ComputeBuffer(_BufferDim, _BufferStride);
-            buffer.SetData(zero_initialized_data);
-            ComputeBufferWrapper._BufferPool.Add(buffer);
-        }
 
         public static implicit operator ComputeBuffer(ComputeBufferWrapper b) => ComputeBufferWrapper._BufferPool[b._bufferPoolIndex];
 
@@ -70,25 +72,24 @@ namespace MyComputeKernel1
     {
         private string _codeName;
         private int _nameID;
-        private ComputeBufferWrapper _attachedBuffer;
+        private ComputeBufferWrapper? _attachedBuffer;
         private int _dim;
 
-        public KernelBufferField(ComputeKernel ck, string codeName, int dim)
+        public KernelBufferField(ComputeKernel ck, string codeName)
         {
             _codeName = codeName;
             _nameID = Shader.PropertyToID(_codeName);
-            _dim = dim;
-            _attachedBuffer = new ComputeBufferWrapper(dim);
+            _dim = 0;
 
             ck.AddField(this);
         }
 
-        public KernelBufferField(ComputeKernel ck, string codeName, ComputeBufferWrapper preexistingBuffer)
+        public KernelBufferField(ComputeKernel ck, string codeName, ComputeBufferWrapper buffer)
         {
             _codeName = codeName;
             _nameID = Shader.PropertyToID(_codeName);
-            _dim = preexistingBuffer.dim;
-            _attachedBuffer = preexistingBuffer;
+            _dim = buffer.dim;
+            _attachedBuffer = buffer;
 
             ck.AddField(this);
         }
@@ -104,19 +105,35 @@ namespace MyComputeKernel1
         
         public static implicit operator float[](KernelBufferField bf)
         {
-            float[] data = new float[bf._dim];
-            //use a non-blocking call for this if doing anything other than testing
-            ((ComputeBuffer)bf._attachedBuffer).GetData(data);
-            return data;
+            if (bf._attachedBuffer is ComputeBufferWrapper attachedBuffer)
+            {
+                float[] data = new float[bf._dim];
+                //use a non-blocking call for this if doing anything other than testing
+                ((ComputeBuffer)bf._attachedBuffer).GetData(data);
+                return data;
+            }
+            else
+                throw new System.Exception("Trying to read an unbound buffer from a KernelBufferField");
         }
 
         public void SetData(float[] data)
         {
-            ((ComputeBuffer)_attachedBuffer).SetData(data);
+            if (_attachedBuffer is ComputeBufferWrapper attachedBuffer)
+            {
+                ((ComputeBuffer)attachedBuffer).SetData(data);
+            }
+            else
+                throw new System.Exception("Trying to send data to an unbound buffer from a KernelBufferField");
+
+            
         }
 
         public void PreDispatch(ComputeShader shader, int kernelNameID)
         {
+            if(_attachedBuffer is null)
+            {
+                throw new System.Exception("You tried to launch a kernel with an unbound KernelBufferField. Remember to Bind a buffer to this field before launching any dispatches.");
+            }
             shader.SetBuffer(kernelNameID, _nameID, _attachedBuffer);
         }
 
@@ -124,13 +141,13 @@ namespace MyComputeKernel1
     }
 
 
-    public struct _MyGlobalInt : IKernelField
+    public class GlobalInt : IKernelField
     {
         private string _name;
         private int _nameID;
-        private int _value;
+        private int? _value;
 
-        public _MyGlobalInt(ComputeKernel ck, string name, int value = 0)
+        public GlobalInt(ComputeKernel ck, string name, int value)
         {
             _name = name;
             _nameID = Shader.PropertyToID(name);
@@ -139,22 +156,45 @@ namespace MyComputeKernel1
             ck.AddField(this);
         }
 
+        public GlobalInt(ComputeKernel ck, string name)
+        {
+            _name = name;
+            _nameID = Shader.PropertyToID(name);
+            _value = null;
 
-        public static implicit operator int(_MyGlobalInt i) => i._value;
+            ck.AddField(this);
+        }
+
+        public void SetInt(int value)
+        {
+            _value = value;
+        }
+
+        //public static implicit operator int(MyGlobalInt i)
+        //{
+        //    i._value;
+        //}
+        //there is no read-int from the GPU
 
         public void PreDispatch(ComputeShader shader, int kernelID)
         {
-            shader.SetInt(_nameID, _value);
+            if (_value is int value)
+            {
+                shader.SetInt(_nameID, value);
+            }
+            else
+                throw new System.Exception("Trying to launch a Kernel with integer " + _name + " unbound");
+            
         }
     }
 
-    public struct _MyGlobalFloat : IKernelField
+    public class GlobalFloat : IKernelField
     {
         private string _name;
         private int _nameID;
-        private float _value;
+        private float? _value;
 
-        public _MyGlobalFloat(ComputeKernel ck, string name, float value = 0.0f)
+        public GlobalFloat(ComputeKernel ck, string name, float value)
         {
             _name = name;
             _nameID = Shader.PropertyToID(name);
@@ -163,32 +203,45 @@ namespace MyComputeKernel1
             ck.AddField(this);
         }
 
+        public GlobalFloat(ComputeKernel ck, string name)
+        {
+            _name = name;
+            _nameID = Shader.PropertyToID(name);
+            _value = null;
 
-        public static implicit operator float(_MyGlobalFloat f) => f._value;
+            ck.AddField(this);
+        }
+
+        public void SetFloat(int value)
+        {
+            _value = value;
+        }
+
+        //public static implicit operator int(MyGlobalInt i)
+        //{
+        //    i._value;
+        //}
+        //there is no read-int from the GPU
 
         public void PreDispatch(ComputeShader shader, int kernelID)
         {
-            shader.SetFloat(_nameID, _value);
-        }
+            if (_value is float value)
+            {
+                shader.SetFloat(_nameID, value);
+            }
+            else
+                throw new System.Exception("Trying to launch a Kernel with float " + _name + " unbound");
 
+        }
     }
 
-    public struct _MyGlobalInt3 : IKernelField
+    public class GlobalInt3 : IKernelField
     {
         private string _name;
         private int _nameID;
-        private Vector3Int _value;
+        private Vector3Int? _value;
 
-        public _MyGlobalInt3(ComputeKernel ck, string name)
-        {
-            _name = name;
-            _nameID = Shader.PropertyToID(name);
-            _value = Vector3Int.zero;
-
-            ck.AddField(this);
-        }
-
-        public _MyGlobalInt3(ComputeKernel ck, string name, Vector3Int value)
+        public GlobalInt3(ComputeKernel ck, string name, Vector3Int value)
         {
             _name = name;
             _nameID = Shader.PropertyToID(name);
@@ -197,18 +250,39 @@ namespace MyComputeKernel1
             ck.AddField(this);
         }
 
-        public static implicit operator Vector3Int(_MyGlobalInt3 i) => i._value;
-        public static implicit operator int[](_MyGlobalInt3 i) => new int[] { i._value.x, i._value.y, i._value.z };
-
-        public void PreDispatch(ComputeShader shader, int kernelNameID)
+        public GlobalInt3(ComputeKernel ck, string name)
         {
-            shader.SetInts(_nameID, this);
+            _name = name;
+            _nameID = Shader.PropertyToID(name);
+            _value = null;
+
+            ck.AddField(this);
         }
 
+        public void SetInt3(Vector3Int value)
+        {
+            _value = value;
+        }
 
+        //public static implicit operator int(MyGlobalInt i)
+        //{
+        //    i._value;
+        //}
+        //there is no read-int from the GPU
+
+        public void PreDispatch(ComputeShader shader, int kernelID)
+        {
+            if (_value is Vector3Int value)
+            {
+                shader.SetInts(_nameID, value.x, value.y, value.z);
+            }
+            else
+                throw new System.Exception("Trying to launch a Kernel with int3 " + _name + " unbound");
+
+        }
     }
 
-    public struct GridDimensionField
+    public class GridDimensionField
     {
         private string _name;
         private int _nameID;
@@ -225,7 +299,7 @@ namespace MyComputeKernel1
 
     }
 
-    public struct GroupDimensionField
+    public class GroupDimensionField
     {
         private string _name;
         private int _nameID;
@@ -251,8 +325,8 @@ namespace MyComputeKernel1
         private int _kernelNameID;
         private ComputeShader _computeShader;
         private List<IKernelField> _kernelFields;
-        public List<GridDimensionField> _gridDimensionField;
-        public List<GroupDimensionField> _groupDimensionField;
+        public GridDimensionField? _gridDimensionField;
+        public GroupDimensionField? _groupDimensionField;
 
 
 
@@ -265,8 +339,6 @@ namespace MyComputeKernel1
             _kernelNameID = computeShader.FindKernel(kernelName);
 
             _kernelFields = new List<IKernelField>();
-            _groupDimensionField = new List<GroupDimensionField>();
-            _gridDimensionField = new List<GridDimensionField>();
 
         }
 
@@ -277,12 +349,12 @@ namespace MyComputeKernel1
 
         public void AddGroupDimensionField(GroupDimensionField field)
         {
-            _groupDimensionField.Add(field);
+            _groupDimensionField = field;
         }
 
         public void AddGridDimensionField(GridDimensionField field)
         {
-            _gridDimensionField.Add(field);
+            _gridDimensionField = field;
         }
 
 
@@ -291,16 +363,16 @@ namespace MyComputeKernel1
 
             
 
-            if (_gridDimensionField.Count != 0)
+            if (_gridDimensionField is GridDimensionField gridDimensionField)
             {
-                _computeShader.SetInts(_gridDimensionField[0].nameID,  x, y, z);
+                _computeShader.SetInts(gridDimensionField.nameID,  x, y, z);
             }
 
-            if (_groupDimensionField.Count != 0)
+            if (_groupDimensionField is GroupDimensionField groupDimensionField)
             {
                 uint X, Y, Z;
                 _computeShader.GetKernelThreadGroupSizes(_kernelNameID, out X, out Y, out Z);
-                _computeShader.SetInts(_groupDimensionField[0].nameID, (int)X, (int)Y, (int)Z);
+                _computeShader.SetInts(groupDimensionField.nameID, (int)X, (int)Y, (int)Z);
             }
 
 

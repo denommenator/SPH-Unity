@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-using MyComputeKernel1;
+using SPH;
 
 public class GroupMemoryKernel
 {
@@ -16,11 +16,11 @@ public class GroupMemoryKernel
 
 
     public GroupMemoryKernel(ComputeShader shader)
-    {
+    { 
         _computeKernel = new ComputeKernel(shader, "GroupMemoryTest");
 
-        my_global_array = new KernelBufferField(_computeKernel, "my_global_array", 2);
-        read_result = new KernelBufferField(_computeKernel, "read_result", 2);
+        my_global_array = new KernelBufferField(_computeKernel, "my_global_array");
+        read_result = new KernelBufferField(_computeKernel, "read_result");
 
         group_dim = new GroupDimensionField(_computeKernel, "group_dim");
         grid_dim = new GridDimensionField(_computeKernel, "grid_dim");

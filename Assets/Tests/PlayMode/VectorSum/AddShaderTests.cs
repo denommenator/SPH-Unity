@@ -77,7 +77,7 @@ public class AddShaderTests
             A[i] = 1.0f;
             B[i] = 10.0f;
         }
-        float result = dm.VectorAddSum2(A, B);
+        float result = dm.VectorAddSum(A, B);
         Assert.AreEqual(11.0f * N, result, "AddSum is not correct!");
         
 

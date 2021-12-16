@@ -2,16 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-using MyComputeKernel1;
+using SPH;
 
 public class VectorAddKernel
 {
-    private int _dim;
     private int _NBlocks;
     public KernelBufferField A;
     public KernelBufferField B;
     public KernelBufferField AddResult;
-    public _MyGlobalInt ArrayDim;
+    public GlobalInt ArrayDim;
 
 
     ComputeKernel _computeKernel;
@@ -19,24 +18,21 @@ public class VectorAddKernel
     GridDimensionField grid_dim;
 
 
-    public VectorAddKernel(ComputeShader shader, int dim)
+    public VectorAddKernel(ComputeShader shader)
     {
-        _dim = dim;
         _NBlocks = 2;
         _computeKernel = new ComputeKernel(shader, "VectorAdd");
 
-        A = new KernelBufferField(_computeKernel, "_A", _dim);
-        B = new KernelBufferField(_computeKernel, "_B", _dim);
-        AddResult = new KernelBufferField(_computeKernel, "_AddResult", _dim);
+        A = new KernelBufferField(_computeKernel, "_A");
+        B = new KernelBufferField(_computeKernel, "_B");
 
-        ArrayDim = new _MyGlobalInt(_computeKernel, "_ArrayDim", _dim);
+        AddResult = new KernelBufferField(_computeKernel, "_AddResult");
+
+        ArrayDim = new GlobalInt(_computeKernel, "_ArrayDim");
 
         grid_dim = new GridDimensionField(_computeKernel, "grid_dim");
         group_dim = new GroupDimensionField(_computeKernel, "group_dim");
         
-
-
-
     }
 
     public void Dispatch()
@@ -44,10 +40,10 @@ public class VectorAddKernel
         _computeKernel.Dispatch(_NBlocks, 1, 1);
     }
 
-    public float[] GetResult()
-    {
-        return AddResult;
+    //public float[] GetResult()
+    //{
+    //    return AddResult;
 
-    }
+    //}
 
 }
