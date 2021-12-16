@@ -242,11 +242,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 1771490882}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 93701bc3ddadc974193e5b152b8423e3, type: 3}
+  m_Script: {fileID: 11500000, guid: 363fd845724d34743a1cce1b7087c28f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  computeShader: {fileID: 7200000, guid: 5536206fc0ae4e84ba86f09744076e19, type: 3}
-  dispatchGroupDimensions: {x: 2, y: 1, z: 1}
+  shader: {fileID: 7200000, guid: 5536206fc0ae4e84ba86f09744076e19, type: 3}
 --- !u!4 &1771490884
 Transform:
   m_ObjectHideFlags: 0

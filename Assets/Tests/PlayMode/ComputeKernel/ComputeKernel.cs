@@ -13,6 +13,18 @@ namespace MyComputeKernel1
         private int _BufferDim;
         private int _BufferStride;
 
+        static ComputeBufferWrapper()
+        {
+            _BufferPool = new List<ComputeBuffer>();
+        }
+
+        public static void ReleaseBuffers()
+        {
+            foreach (ComputeBuffer b in _BufferPool)
+            {
+                b.Release();
+            }
+        }
 
         public ComputeBufferWrapper(float[] data)
         {
@@ -44,13 +56,7 @@ namespace MyComputeKernel1
 
         public static implicit operator ComputeBuffer(ComputeBufferWrapper b) => ComputeBufferWrapper._BufferPool[b._bufferPoolIndex];
 
-        public void ReleaseBuffers()
-        {
-            foreach(ComputeBuffer b in _BufferPool)
-            {
-                b.Release();
-            }
-        }
+        
 
     }
 

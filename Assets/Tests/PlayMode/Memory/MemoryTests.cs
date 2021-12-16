@@ -6,8 +6,7 @@ using UnityEngine.TestTools;
 
 public class MemoryTests
 {
-    GroupMemoryWrapper groupMemoryTest;
-    MyComputeKernel.ComputeKernel memoryTestKernel;
+    DummyGameObject dm;
 
     [OneTimeSetUp]
     public void LoadScene()
@@ -27,10 +26,9 @@ public class MemoryTests
         var testObject = GameObject.Find("MemoryGameObject");
         Assert.IsNotNull(testObject);
 
-        groupMemoryTest = testObject.GetComponent<GroupMemoryWrapper>();
-        Assert.IsNotNull(groupMemoryTest);
+        dm = testObject.GetComponent<DummyGameObject>();
+        Assert.IsNotNull(dm);
 
-        memoryTestKernel = groupMemoryTest.GetKernel();
     }
 
 
@@ -38,15 +36,10 @@ public class MemoryTests
     public void GroupMemoryTest()
     {
 
-        float[] A = { 5, 5 };
-        memoryTestKernel.FillBuffer("my_global_array", A);
-        memoryTestKernel.FillBuffer("read_results", A);
+        float[] result = dm.GetResult();
 
-        memoryTestKernel.Dispatch();
-        float[] B = memoryTestKernel.GetBufferData("read_results");
-
-        Assert.That(B[0] == 0, "First index is correct!");
-        Assert.That(B[0] == 0, "Second index is correct!");
+        Assert.AreEqual(result[0], 0.0f, "Memory is not correct!");
+        Assert.AreEqual(result[1], 1.0f, "Memory is not correct!");
 
     }
 }
