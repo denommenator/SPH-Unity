@@ -13,6 +13,7 @@ namespace MyComputeKernel1
         private int _BufferDim;
         private int _BufferStride;
 
+        public int dim => _BufferDim;
         static ComputeBufferWrapper()
         {
             _BufferPool = new List<ComputeBuffer>();
@@ -82,14 +83,36 @@ namespace MyComputeKernel1
             ck.AddField(this);
         }
 
-        public static implicit operator ComputeBuffer(KernelBufferField bf) => (ComputeBuffer)(bf._attachedBuffer);
+        public KernelBufferField(ComputeKernel ck, string codeName, ComputeBufferWrapper preexistingBuffer)
+        {
+            _codeName = codeName;
+            _nameID = Shader.PropertyToID(_codeName);
+            _dim = preexistingBuffer.dim;
+            _attachedBuffer = preexistingBuffer;
 
+            ck.AddField(this);
+        }
+
+        public void BindBuffer(ComputeBufferWrapper buffer)
+        {
+            _dim = buffer.dim;
+            _attachedBuffer = buffer;
+
+        }
+
+        public static implicit operator ComputeBufferWrapper(KernelBufferField bf) => bf._attachedBuffer;
+        
         public static implicit operator float[](KernelBufferField bf)
         {
             float[] data = new float[bf._dim];
             //use a non-blocking call for this if doing anything other than testing
             ((ComputeBuffer)bf._attachedBuffer).GetData(data);
             return data;
+        }
+
+        public void SetData(float[] data)
+        {
+            ((ComputeBuffer)_attachedBuffer).SetData(data);
         }
 
         public void PreDispatch(ComputeShader shader, int kernelNameID)

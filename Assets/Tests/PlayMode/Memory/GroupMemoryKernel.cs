@@ -34,13 +34,5 @@ public class GroupMemoryKernel
         _computeKernel.Dispatch(x, y, z);
     }
 
-    public float[] GetResult()
-    {
-        float[] result = new float[2];
-        ((ComputeBuffer)read_result).GetData(result);
-        return result;
-
-
-    }
 
 }

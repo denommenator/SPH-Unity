@@ -9,7 +9,7 @@
 StructuredBuffer<float> _A;
 StructuredBuffer<float> _B;
 
-RWStructuredBuffer<float> _Add_Result;
+RWStructuredBuffer<float> _AddResult;
 uint _ArrayDim;
 
 
@@ -40,7 +40,7 @@ void VectorAdd (uint3 thread_id : SV_GroupThreadID, uint3 group_id : SV_GroupID)
         idx += grid_dim.x * group_dim.x  //the grid size, no SV variable to tell you how many groups were launched!
         )
     {
-        _Add_Result[idx] = _A[idx] + _B[idx];
+        _AddResult[idx] = _A[idx] + _B[idx];
     }
 
 

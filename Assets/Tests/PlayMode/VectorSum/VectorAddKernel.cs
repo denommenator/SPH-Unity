@@ -4,13 +4,13 @@ using UnityEngine;
 
 using MyComputeKernel1;
 
-public class VectorSumKernel
+public class VectorAddKernel
 {
     private int _dim;
     private int _NBlocks;
     public KernelBufferField A;
-    public KernelBufferField Block_Sums;
-    public KernelBufferField Sum;
+    public KernelBufferField B;
+    public KernelBufferField AddResult;
     public _MyGlobalInt ArrayDim;
 
 
@@ -19,15 +19,15 @@ public class VectorSumKernel
     GridDimensionField grid_dim;
 
 
-    public VectorSumKernel(ComputeShader shader, int dim)
+    public VectorAddKernel(ComputeShader shader, int dim)
     {
         _dim = dim;
         _NBlocks = 2;
-        _computeKernel = new ComputeKernel(shader, "VectorSum");
+        _computeKernel = new ComputeKernel(shader, "VectorAdd");
 
         A = new KernelBufferField(_computeKernel, "_A", _dim);
-        Block_Sums = new KernelBufferField(_computeKernel, "_Block_Sums", _NBlocks);
-        Sum = new KernelBufferField(_computeKernel, "_Sum", 1);
+        B = new KernelBufferField(_computeKernel, "_B", _dim);
+        AddResult = new KernelBufferField(_computeKernel, "_AddResult", _dim);
 
         ArrayDim = new _MyGlobalInt(_computeKernel, "_ArrayDim", _dim);
 
@@ -44,5 +44,10 @@ public class VectorSumKernel
         _computeKernel.Dispatch(_NBlocks, 1, 1);
     }
 
+    public float[] GetResult()
+    {
+        return AddResult;
+
+    }
 
 }

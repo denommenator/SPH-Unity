@@ -19,7 +19,7 @@ public class DummyGameObject : MonoBehaviour
     {
         groupMemoryKernel.Dispatch(2, 1, 1);
 
-        return groupMemoryKernel.GetResult();
+        return groupMemoryKernel.read_result;
 
     }
 
