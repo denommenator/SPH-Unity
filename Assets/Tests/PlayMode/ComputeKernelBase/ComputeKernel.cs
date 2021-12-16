@@ -113,7 +113,7 @@ namespace SPH
                 return data;
             }
             else
-                throw new System.Exception("Trying to read an unbound buffer from a KernelBufferField");
+                throw new System.Exception("Trying to read an unbound buffer from KernelBufferField " + bf._codeName);
         }
 
         public void SetData(float[] data)
@@ -123,7 +123,7 @@ namespace SPH
                 ((ComputeBuffer)attachedBuffer).SetData(data);
             }
             else
-                throw new System.Exception("Trying to send data to an unbound buffer from a KernelBufferField");
+                throw new System.Exception("Trying to send data to an unbound buffer from KernelBufferField"+ _codeName);
 
             
         }
@@ -132,7 +132,7 @@ namespace SPH
         {
             if(_attachedBuffer is null)
             {
-                throw new System.Exception("You tried to launch a kernel with an unbound KernelBufferField. Remember to Bind a buffer to this field before launching any dispatches.");
+                throw new System.Exception("You tried to launch a kernel with an unbound KernelBufferField "+_codeName+". Remember to Bind a buffer to this field before launching any dispatches.");
             }
             shader.SetBuffer(kernelNameID, _nameID, _attachedBuffer);
         }

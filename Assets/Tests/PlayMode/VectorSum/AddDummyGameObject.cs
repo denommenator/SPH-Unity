@@ -53,18 +53,21 @@ public class AddDummyGameObject : MonoBehaviour
 
         SPH.ComputeBufferWrapper ABuffer = new SPH.ComputeBufferWrapper(A);
         SPH.ComputeBufferWrapper BBuffer = new SPH.ComputeBufferWrapper(B);
+        SPH.ComputeBufferWrapper AddResultBuffer = new SPH.ComputeBufferWrapper(A.Length);
 
         vectorAddKernel = new VectorAddKernel(shader);
 
         vectorAddKernel.A.BindBuffer(ABuffer);
         vectorAddKernel.B.BindBuffer(BBuffer);
+        vectorAddKernel.AddResult.BindBuffer(AddResultBuffer);
 
-        vectorSumKernel.ArrayDim.SetInt(A.Length);
+        vectorAddKernel.ArrayDim.SetInt(A.Length);
 
         vectorAddKernel.Dispatch();
 
         vectorSumKernel = new VectorSumKernel(shader);
         vectorSumKernel.A.BindBuffer(vectorAddKernel.AddResult);
+        vectorSumKernel.ArrayDim.SetInt(A.Length);
         vectorSumKernel.Dispatch();
 
 
