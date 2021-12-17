@@ -15,15 +15,12 @@ public class AddDummyGameObject : MonoBehaviour
     {
     }
 
-    public float VectorSum(float[] A)
+    public float VectorSum1(float[] A)
     {
-        SPH.ComputeBufferWrapper ABuffer = new SPH.ComputeBufferWrapper(A);
+       
         vectorSumKernel = new VectorSumKernel(shader);
-        vectorSumKernel.A.BindBuffer(ABuffer);
-        vectorSumKernel.ArrayDim.SetInt(A.Length);
-        vectorSumKernel.Dispatch();
-
-        return ((float[])vectorSumKernel.Sum)[0];
+        
+        return ((float[])vectorSumKernel.VectorSum(A))[0];
 
     }
 
@@ -63,12 +60,11 @@ public class AddDummyGameObject : MonoBehaviour
         vectorAddKernel.VectorAdd(ABuffer, BBuffer, AddResultBuffer);
 
         vectorSumKernel = new VectorSumKernel(shader);
-        vectorSumKernel.A.BindBuffer(AddResultBuffer);
-        vectorSumKernel.ArrayDim.SetInt(A.Length);
-        vectorSumKernel.Dispatch();
+
+        
 
 
-        return ((float[])vectorSumKernel.Sum)[0];
+        return ((float[])vectorSumKernel.VectorSum(AddResultBuffer))[0];
 
     }
 

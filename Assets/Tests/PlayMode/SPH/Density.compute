@@ -1,0 +1,33 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel ComputeDensity
+
+
+#include "Constants.inc"
+#include "SmoothingKernels.inc"
+
+
+StructuredBuffer<float3> _Positions;
+RWStructuredBuffer<float3> _Densities;
+
+float _hDensity;
+uint _nBodies;
+
+
+
+[numthreads(thread_group_dim, 1, 1)]
+void ComputeDensity(uint p_id : SV_DispatchThreadID)
+{
+	if (p_id >= _nBodies)
+		return;
+	float h = _hDensity;
+	float3 p = _Positions[p_id];
+	float density_p = 0.0f;
+
+	for (uint q_id = 0; q_id < _nBodies; q_id++)
+	{
+		float3 q = _Positions[q_id];
+		density_p += particleMass * W_poly(p - q, h);
+	}
+
+	_Densities[p_id] = density_p;
+}
