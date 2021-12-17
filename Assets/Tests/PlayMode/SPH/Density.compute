@@ -1,3 +1,6 @@
+#define group_dim_pow_2 512
+
+
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel ComputeDensity
 
@@ -13,21 +16,63 @@ float _hDensity;
 uint _nBodies;
 
 
+uint3 grid_dim;
+uint3 group_dim;
 
-[numthreads(thread_group_dim, 1, 1)]
-void ComputeDensity(uint p_id : SV_DispatchThreadID)
+groupshared float density_thread_id_orbits[group_dim_pow_2];
+
+
+[numthreads(group_dim_pow_2, 1, 1)]
+void ComputeDensity(uint group_thread_id : SV_GroupThreadID, uint group_id : SV_GroupID)
 {
-	if (p_id >= _nBodies)
-		return;
-	float h = _hDensity;
-	float3 p = _Positions[p_id];
-	float density_p = 0.0f;
-
-	for (uint q_id = 0; q_id < _nBodies; q_id++)
+	//grid_dim-stride loop over the particles p_id to compute each particle density.
+	//i.e. each block will computes the density at only 1 particle if we have enough blocks. 
+	// Since we might run out
+	//of blocks due to the maximum # of blocks being less than 1m, we recycle the blocks
+	//and stride over the #grid_dim.
+	for (uint p_id = group_id;
+		p_id < _nBodies;
+		p_id += grid_dim.x)
 	{
-		float3 q = _Positions[q_id];
-		density_p += particleMass * W_poly(p - q, h);
-	}
+		float h = _hDensity;
+		float3 p = _Positions[p_id];
 
-	_Densities[p_id] = density_p;
+		float density_thread_id_orbit = 0.0f;
+
+		//flatten the contributions from neighbor particles, q_id
+		//to an array of size equal to the number of threads per block
+		//which is required to be a power of 2.
+		//This is a block-stride loop, indexed by group_thread_id's and
+		//containing the +group_dim-orbits of the density contributions of q_ids
+		for (uint q_id = group_thread_id; 
+			q_id < _nBodies; 
+			q_id += group_dim.x)
+		{
+			float3 q = _Positions[q_id];
+			density_thread_id_orbit += particleMass * W_poly(p - q, h);
+		}
+
+		density_thread_id_orbits[group_thread_id.x] = density_thread_id_orbit;
+
+		//I was warned by MS HLSL docs not to use this due to portability...
+		GroupMemoryBarrierWithGroupSync();
+
+		//now cooperatively sum the partial sums from the previous loop,
+		// each thread adds two members together, leaving only half the values each iteration.
+		//This requires the number of groupThreads to be a power of 2.
+		//The total sum remains in density_thread_id_orbits[0]
+
+		uint i = group_dim.x / 2;
+		while (i != 0)
+		{
+			if (group_thread_id.x < i)
+			{
+				density_thread_id_orbits[thread_id.x] += density_thread_id_orbits[thread_id.x + i];
+			}
+			GroupMemoryBarrierWithGroupSync();
+			i /= 2;
+		}
+
+		_Densities[p_id] = density_thread_id_orbits[0];
+	}
 }

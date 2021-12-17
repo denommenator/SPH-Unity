@@ -1,3 +1,10 @@
+#ifndef __SMOOTHING_KERNELS_INC__
+#define __SMOOTHING_KERNELS_INC__
+static float PI = 3.14159265358979323846;
+
+static float3 zero_vec = { 0.0f, 0.0f, 0.0f };
+static float particleMass = 1000.0f;
+
 
 //smoothing "kernels"
 float W_Gaussian(float3 r_vec, float h)
@@ -91,3 +98,6 @@ float3 W_spiky_gradient(float3 r_vec, float h)
 	}
 	return result;
 }
+
+
+#endif // __SMOOTHING_KERNELS_INC__
