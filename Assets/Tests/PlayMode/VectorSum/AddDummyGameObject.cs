@@ -27,24 +27,27 @@ public class AddDummyGameObject : MonoBehaviour
 
     }
 
-    public float[] VectorAdd(float[] A, float[] B)
+    public float[] VectorAdd1(float[] A, float[] B)
     {
-        SPH.ComputeBufferWrapper ABuffer = new SPH.ComputeBufferWrapper(A);
-        SPH.ComputeBufferWrapper BBuffer = new SPH.ComputeBufferWrapper(B);
-
-        SPH.ComputeBufferWrapper AddResultBuffer = new SPH.ComputeBufferWrapper(A.Length);
 
         vectorAddKernel = new VectorAddKernel(shader);
 
-        vectorAddKernel.A.BindBuffer(ABuffer);
-        vectorAddKernel.B.BindBuffer(BBuffer);
-        vectorAddKernel.AddResult.BindBuffer(AddResultBuffer);
+        return vectorAddKernel.VectorAdd(A, B);
 
-        vectorAddKernel.ArrayDim.SetInt(A.Length);
+    }
 
-        vectorAddKernel.Dispatch();
+    public float[] VectorAdd2(float[] A, float[] B)
+    {
+        SPH.ComputeBufferWrapper ABuffer = new SPH.ComputeBufferWrapper(A);
+        SPH.ComputeBufferWrapper BBuffer = new SPH.ComputeBufferWrapper(B);
+        SPH.ComputeBufferWrapper ResultBuffer = new SPH.ComputeBufferWrapper(A.Length);
 
-        return vectorAddKernel.AddResult;
+
+        vectorAddKernel = new VectorAddKernel(shader);
+
+        vectorAddKernel.VectorAdd(A, B, ResultBuffer);
+
+        return ResultBuffer;
 
     }
 
@@ -57,16 +60,10 @@ public class AddDummyGameObject : MonoBehaviour
 
         vectorAddKernel = new VectorAddKernel(shader);
 
-        vectorAddKernel.A.BindBuffer(ABuffer);
-        vectorAddKernel.B.BindBuffer(BBuffer);
-        vectorAddKernel.AddResult.BindBuffer(AddResultBuffer);
-
-        vectorAddKernel.ArrayDim.SetInt(A.Length);
-
-        vectorAddKernel.Dispatch();
+        vectorAddKernel.VectorAdd(ABuffer, BBuffer, AddResultBuffer);
 
         vectorSumKernel = new VectorSumKernel(shader);
-        vectorSumKernel.A.BindBuffer(vectorAddKernel.AddResult);
+        vectorSumKernel.A.BindBuffer(AddResultBuffer);
         vectorSumKernel.ArrayDim.SetInt(A.Length);
         vectorSumKernel.Dispatch();
 

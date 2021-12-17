@@ -58,13 +58,33 @@ public class AddShaderTests
             A[i] = 1.0f;
             B[i] = 10.0f;
         }
-        float[] result = dm.VectorAdd(A, B);
+        float[] result = dm.VectorAdd1(A, B);
         for (int i = 0; i < N; i++)
         {
             Assert.AreEqual(11.0f, result[i], "Sum is not correct!");
         }
 
     }
+
+    [Test]
+    public void VectorAdd2Test()
+    {
+        int N = 1_024;
+        float[] A = new float[N];
+        float[] B = new float[N];
+        for (int i = 0; i < N; i++)
+        {
+            A[i] = 1.0f;
+            B[i] = 10.0f;
+        }
+        float[] result = dm.VectorAdd2(A, B);
+        for (int i = 0; i < N; i++)
+        {
+            Assert.AreEqual(11.0f, result[i], "Sum is not correct!");
+        }
+
+    }
+
 
     [Test]
     public void VectorAddSumTest()

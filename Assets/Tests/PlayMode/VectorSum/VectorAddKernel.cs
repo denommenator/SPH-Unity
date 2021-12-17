@@ -4,7 +4,7 @@ using UnityEngine;
 
 using SPH;
 
-public class VectorAddKernel
+public class VectorAddKernelInternal 
 {
     private int _NBlocks;
     public KernelBufferField A;
@@ -18,9 +18,9 @@ public class VectorAddKernel
     GridDimensionField grid_dim;
 
 
-    public VectorAddKernel(ComputeShader shader)
+    public VectorAddKernelInternal(ComputeShader shader, int NBlocks)
     {
-        _NBlocks = 2;
+        _NBlocks = NBlocks;
         _computeKernel = new ComputeKernel(shader, "VectorAdd");
 
         A = new KernelBufferField(_computeKernel, "_A");
@@ -40,10 +40,37 @@ public class VectorAddKernel
         _computeKernel.Dispatch(_NBlocks, 1, 1);
     }
 
-    //public float[] GetResult()
-    //{
-    //    return AddResult;
+}
 
-    //}
 
+public class VectorAddKernel
+{
+    private VectorAddKernelInternal _vectorAddKernelInternal;
+
+    public VectorAddKernel(ComputeShader shader, int NBlocks = 2)
+    {
+        _vectorAddKernelInternal = new VectorAddKernelInternal(shader, NBlocks);
+    }
+
+    public ComputeBufferWrapper VectorAdd(ComputeBufferWrapper ABuffer, ComputeBufferWrapper BBuffer, ComputeBufferWrapper? ResultBuffer = null)
+    {
+        _vectorAddKernelInternal.A.BindBuffer(ABuffer);
+        _vectorAddKernelInternal.B.BindBuffer(BBuffer);
+        if(ResultBuffer is ComputeBufferWrapper _ResultBuffer)
+        {
+            _vectorAddKernelInternal.AddResult.BindBuffer(_ResultBuffer);
+        }
+
+        else if(_vectorAddKernelInternal.AddResult.dim != ABuffer.dim)
+        {
+            ComputeBufferWrapper AR = new ComputeBufferWrapper(ABuffer.dim);
+            _vectorAddKernelInternal.AddResult.BindBuffer(AR);
+        }
+
+        _vectorAddKernelInternal.ArrayDim.SetInt(ABuffer.dim);
+
+        _vectorAddKernelInternal.Dispatch();
+
+        return _vectorAddKernelInternal.AddResult;
+    }
 }

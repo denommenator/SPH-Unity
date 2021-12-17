@@ -58,8 +58,14 @@ namespace SPH
 
 
         public static implicit operator ComputeBuffer(ComputeBufferWrapper b) => ComputeBufferWrapper._BufferPool[b._bufferPoolIndex];
+        public static implicit operator ComputeBufferWrapper(float[] A) => new ComputeBufferWrapper(A);
+        public static implicit operator float[](ComputeBufferWrapper ABuffer)
+        {
+            float[] A = new float[ABuffer.dim];
+            ((ComputeBuffer)ABuffer).GetData(A);
+            return A;
+        }
 
-        
 
     }
 
@@ -101,8 +107,12 @@ namespace SPH
 
         }
 
+        public int dim => _dim;
+
         public static implicit operator ComputeBufferWrapper(KernelBufferField bf) => bf._attachedBuffer;
-        
+
+
+
         public static implicit operator float[](KernelBufferField bf)
         {
             if (bf._attachedBuffer is ComputeBufferWrapper attachedBuffer)
