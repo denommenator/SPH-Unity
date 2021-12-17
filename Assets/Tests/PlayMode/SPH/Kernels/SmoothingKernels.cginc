@@ -2,15 +2,15 @@
 #define __SMOOTHING_KERNELS_INC__
 
 //smoothing "kernels"
-float W_Gaussian(float3 r_vec, float h)
+float W_gaussian(float3 r_vec, float h)
 {
 	float r_squared = dot(r_vec, r_vec);
 	return 1 / (pow(h , 2) * PI) * exp(- r_squared / pow(h , 2));
 }
 
-float3 W_Gaussian_gradient(float3 r_vec, float h)
+float3 W_gaussian_gradient(float3 r_vec, float h)
 {
-	return -2.0f * W_Gaussian(r_vec, h) * (r_vec) / pow(h , 2);
+	return -2.0f * W_gaussian(r_vec, h) * (r_vec) / pow(h , 2);
 }
 
 float W_viscocity_laplacian(float3 r_vec,float h)

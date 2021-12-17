@@ -11,4 +11,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Tests/PlayMode/VectorSum/VectorSumTests.unity
     guid: 7600063e27bca9140acbfd9bab528525
+  - enabled: 1
+    path: Assets/Tests/PlayMode/SPH/SPHTestScene.unity
+    guid: effab77ee523c40f18d66b8516d0a96b
   m_configObjects: {}

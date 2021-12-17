@@ -7,7 +7,6 @@ namespace SPH
     public class DensityKernelInternal
     {
         ComputeKernel _computeKernel;
-        private int _NBlocks;
 
         public KernelBufferFieldFloat3 _Positions;
         public KernelBufferFieldFloat _Densities;
@@ -20,9 +19,8 @@ namespace SPH
         
 
 
-        public DensityKernelInternal(ComputeShader shader, int NBlocks)
+        public DensityKernelInternal(ComputeShader shader)
         {
-            _NBlocks = NBlocks;
             _computeKernel = new ComputeKernel(shader, "ComputeDensity");
 
             _Positions = new KernelBufferFieldFloat3(_computeKernel, "_Positions");
@@ -36,9 +34,10 @@ namespace SPH
 
         }
 
-        public void Dispatch()
+        public void Dispatch(int NBlocks)
         {
-            _computeKernel.Dispatch(_NBlocks, 1, 1);
+            int CappedNBlocks = Mathf.Min(NBlocks, 65_535);
+            _computeKernel.Dispatch(CappedNBlocks, 1, 1);
         }
 
     }
@@ -48,13 +47,13 @@ namespace SPH
     {
         private DensityKernelInternal _densityKernelInternal;
 
-        public DensityKernel(ComputeShader shader, int NBlocks)
+        public DensityKernel(ComputeShader shader)
         {
-            int CappedNBlocks = Mathf.Min(NBlocks, 65_535);
-            _densityKernelInternal = new DensityKernelInternal(shader, CappedNBlocks);
+            
+            _densityKernelInternal = new DensityKernelInternal(shader);
         }
 
-        public ComputeBufferWrapperFloat ComputeDensity(ComputeBufferWrapperFloat3 Positions, float hDensity, ComputeBufferWrapperFloat? Densities = null)
+        public ComputeBufferWrapperFloat ComputeDensity(ComputeBufferWrapperFloat3 Positions, float hDensity, int NBlocks = 1_000, ComputeBufferWrapperFloat? Densities = null)
         {
             _densityKernelInternal._Positions.BindBuffer(Positions);
             
@@ -72,7 +71,7 @@ namespace SPH
             _densityKernelInternal._hDensity.SetFloat(hDensity);
             _densityKernelInternal._nBodies.SetInt(Positions.dim);
 
-            _densityKernelInternal.Dispatch();
+            _densityKernelInternal.Dispatch(NBlocks);
 
             return _densityKernelInternal._Densities;
         }
