@@ -10,9 +10,12 @@ public class AddDummyGameObject : MonoBehaviour
     private VectorAddKernel vectorAddKernel;
     int N;
 
+    SPH.BufferReleaser bufferReleaser;
+
     // Start is called before the first frame update
     void Start()
     {
+        bufferReleaser = gameObject.AddComponent<SPH.BufferReleaser>();
     }
 
     public float VectorSum1(float[] A)
@@ -35,9 +38,9 @@ public class AddDummyGameObject : MonoBehaviour
 
     public float[] VectorAdd2(float[] A, float[] B)
     {
-        SPH.ComputeBufferWrapper ABuffer = new SPH.ComputeBufferWrapper(A);
-        SPH.ComputeBufferWrapper BBuffer = new SPH.ComputeBufferWrapper(B);
-        SPH.ComputeBufferWrapper ResultBuffer = new SPH.ComputeBufferWrapper(A.Length);
+        SPH.ComputeBufferWrapperFloat ABuffer = new SPH.ComputeBufferWrapperFloat(A);
+        SPH.ComputeBufferWrapperFloat BBuffer = new SPH.ComputeBufferWrapperFloat(B);
+        SPH.ComputeBufferWrapperFloat ResultBuffer = new SPH.ComputeBufferWrapperFloat(A.Length);
 
 
         vectorAddKernel = new VectorAddKernel(shader);
@@ -51,9 +54,9 @@ public class AddDummyGameObject : MonoBehaviour
     public float VectorAddSum(float[] A, float[] B)
     {
 
-        SPH.ComputeBufferWrapper ABuffer = new SPH.ComputeBufferWrapper(A);
-        SPH.ComputeBufferWrapper BBuffer = new SPH.ComputeBufferWrapper(B);
-        SPH.ComputeBufferWrapper AddResultBuffer = new SPH.ComputeBufferWrapper(A.Length);
+        SPH.ComputeBufferWrapperFloat ABuffer = new SPH.ComputeBufferWrapperFloat(A);
+        SPH.ComputeBufferWrapperFloat BBuffer = new SPH.ComputeBufferWrapperFloat(B);
+        SPH.ComputeBufferWrapperFloat AddResultBuffer = new SPH.ComputeBufferWrapperFloat(A.Length);
 
         vectorAddKernel = new VectorAddKernel(shader);
 
@@ -69,14 +72,5 @@ public class AddDummyGameObject : MonoBehaviour
     }
 
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 
-    void OnDestroy()
-    {
-        SPH.ComputeBufferWrapper.ReleaseBuffers();
-    }
 }

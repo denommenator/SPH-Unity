@@ -7,9 +7,9 @@ using SPH;
 public class VectorAddKernelInternal 
 {
     private int _NBlocks;
-    public KernelBufferField A;
-    public KernelBufferField B;
-    public KernelBufferField AddResult;
+    public KernelBufferFieldFloat A;
+    public KernelBufferFieldFloat B;
+    public KernelBufferFieldFloat AddResult;
     public GlobalInt ArrayDim;
 
 
@@ -23,10 +23,10 @@ public class VectorAddKernelInternal
         _NBlocks = NBlocks;
         _computeKernel = new ComputeKernel(shader, "VectorAdd");
 
-        A = new KernelBufferField(_computeKernel, "_A");
-        B = new KernelBufferField(_computeKernel, "_B");
+        A = new KernelBufferFieldFloat(_computeKernel, "_A");
+        B = new KernelBufferFieldFloat(_computeKernel, "_B");
 
-        AddResult = new KernelBufferField(_computeKernel, "_AddResult");
+        AddResult = new KernelBufferFieldFloat(_computeKernel, "_AddResult");
 
         ArrayDim = new GlobalInt(_computeKernel, "_ArrayDim");
 
@@ -52,18 +52,18 @@ public class VectorAddKernel
         _vectorAddKernelInternal = new VectorAddKernelInternal(shader, NBlocks);
     }
 
-    public ComputeBufferWrapper VectorAdd(ComputeBufferWrapper ABuffer, ComputeBufferWrapper BBuffer, ComputeBufferWrapper? ResultBuffer = null)
+    public ComputeBufferWrapperFloat VectorAdd(ComputeBufferWrapperFloat ABuffer, ComputeBufferWrapperFloat BBuffer, ComputeBufferWrapperFloat? ResultBuffer = null)
     {
         _vectorAddKernelInternal.A.BindBuffer(ABuffer);
         _vectorAddKernelInternal.B.BindBuffer(BBuffer);
-        if(ResultBuffer is ComputeBufferWrapper _ResultBuffer)
+        if(ResultBuffer is ComputeBufferWrapperFloat _ResultBuffer)
         {
             _vectorAddKernelInternal.AddResult.BindBuffer(_ResultBuffer);
         }
 
         else if(_vectorAddKernelInternal.AddResult.dim != ABuffer.dim)
         {
-            ComputeBufferWrapper AR = new ComputeBufferWrapper(ABuffer.dim);
+            ComputeBufferWrapperFloat AR = new ComputeBufferWrapperFloat(ABuffer.dim);
             _vectorAddKernelInternal.AddResult.BindBuffer(AR);
         }
 

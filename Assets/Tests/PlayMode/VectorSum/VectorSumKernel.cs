@@ -7,9 +7,9 @@ using SPH;
 public class VectorSumKernelInternal
 {
     private int _NBlocks;
-    public KernelBufferField A;
-    public KernelBufferField Block_Sums;
-    public KernelBufferField Sum;
+    public KernelBufferFieldFloat A;
+    public KernelBufferFieldFloat Block_Sums;
+    public KernelBufferFieldFloat Sum;
     public GlobalInt ArrayDim;
 
 
@@ -23,13 +23,13 @@ public class VectorSumKernelInternal
         _NBlocks = NBlocks;
         _computeKernel = new ComputeKernel(shader, "VectorSum");
 
-        A = new KernelBufferField(_computeKernel, "_A");
+        A = new KernelBufferFieldFloat(_computeKernel, "_A");
 
-        ComputeBufferWrapper Block_Sums_Buffer = new ComputeBufferWrapper(_NBlocks);
-        Block_Sums = new KernelBufferField(_computeKernel, "_Block_Sums", Block_Sums_Buffer);
+        ComputeBufferWrapperFloat Block_Sums_Buffer = new ComputeBufferWrapperFloat(_NBlocks);
+        Block_Sums = new KernelBufferFieldFloat(_computeKernel, "_Block_Sums", Block_Sums_Buffer);
 
-        ComputeBufferWrapper SumBuffer = new ComputeBufferWrapper(1);
-        Sum = new KernelBufferField(_computeKernel, "_Sum", SumBuffer);
+        ComputeBufferWrapperFloat SumBuffer = new ComputeBufferWrapperFloat(1);
+        Sum = new KernelBufferFieldFloat(_computeKernel, "_Sum", SumBuffer);
 
         ArrayDim = new GlobalInt(_computeKernel, "_ArrayDim");
 
@@ -61,22 +61,22 @@ public class VectorSumKernel
         _vectorSumKernelInternal = new VectorSumKernelInternal(shader, NBlocks);
     }
 
-    public ComputeBufferWrapper VectorSum(ComputeBufferWrapper ABuffer, ComputeBufferWrapper? ResultSumBuffer = null)
+    public ComputeBufferWrapperFloat VectorSum(ComputeBufferWrapperFloat ABuffer, ComputeBufferWrapperFloat? ResultSumBuffer = null)
     {
         int NBlocks = _vectorSumKernelInternal.NBlocks;
 
         _vectorSumKernelInternal.A.BindBuffer(ABuffer);
-        _vectorSumKernelInternal.Block_Sums.BindBuffer(new ComputeBufferWrapper(NBlocks));
+        _vectorSumKernelInternal.Block_Sums.BindBuffer(new ComputeBufferWrapperFloat(NBlocks));
 
 
-        if (ResultSumBuffer is ComputeBufferWrapper _ResultBuffer)
+        if (ResultSumBuffer is ComputeBufferWrapperFloat _ResultBuffer)
         {
             _vectorSumKernelInternal.Sum.BindBuffer(_ResultBuffer);
         }
 
         else if (_vectorSumKernelInternal.Sum.dim != 1)
         {
-            ComputeBufferWrapper SumBuffer = new ComputeBufferWrapper(1);
+            ComputeBufferWrapperFloat SumBuffer = new ComputeBufferWrapperFloat(1);
             _vectorSumKernelInternal.Sum.BindBuffer(SumBuffer);
         }
 

@@ -5,12 +5,12 @@
 #pragma kernel ComputeDensity
 
 
-#include "Constants.inc"
-#include "SmoothingKernels.inc"
+#include "Constants.cginc"
+#include "SmoothingKernels.cginc"
 
 
 StructuredBuffer<float3> _Positions;
-RWStructuredBuffer<float3> _Densities;
+RWStructuredBuffer<float> _Densities;
 
 float _hDensity;
 uint _nBodies;
@@ -67,7 +67,7 @@ void ComputeDensity(uint group_thread_id : SV_GroupThreadID, uint group_id : SV_
 		{
 			if (group_thread_id.x < i)
 			{
-				density_thread_id_orbits[thread_id.x] += density_thread_id_orbits[thread_id.x + i];
+				density_thread_id_orbits[group_thread_id.x] += density_thread_id_orbits[group_thread_id.x + i];
 			}
 			GroupMemoryBarrierWithGroupSync();
 			i /= 2;

@@ -9,11 +9,15 @@ public class DummyGameObject : MonoBehaviour
     private GroupMemoryKernel groupMemoryKernel;
     int N;
 
+    SPH.BufferReleaser bufferReleaser;
+
     // Start is called before the first frame update
     void Start()
     {
-        SPH.ComputeBufferWrapper my_global_array_buffer = new SPH.ComputeBufferWrapper(2);
-        SPH.ComputeBufferWrapper read_result_buffer = new SPH.ComputeBufferWrapper(2);
+        bufferReleaser = gameObject.AddComponent<SPH.BufferReleaser>();
+
+        SPH.ComputeBufferWrapperFloat my_global_array_buffer = new SPH.ComputeBufferWrapperFloat(2);
+        SPH.ComputeBufferWrapperFloat read_result_buffer = new SPH.ComputeBufferWrapperFloat(2);
 
         groupMemoryKernel = new GroupMemoryKernel(shader);
 
@@ -31,14 +35,4 @@ public class DummyGameObject : MonoBehaviour
 
     }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
-    void OnDestroy()
-    {
-        SPH.ComputeBufferWrapper.ReleaseBuffers();
-    }
 }
