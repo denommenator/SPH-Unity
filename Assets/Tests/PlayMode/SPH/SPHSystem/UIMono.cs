@@ -30,16 +30,23 @@ namespace SPH
         float densityFactor = 1.0f;
 
         [SerializeField]
-        Material material;
+        Material sphMaterial;
+        static readonly int sphMaterialPositionsID = Shader.PropertyToID("_Positions");
+
 
         [SerializeField]
         Mesh mesh;
-
 
         private ComputeBufferWrapperFloat3 _PositionsA;
         private ComputeBufferWrapperFloat3 _PositionsB;
         private ComputeBufferWrapperFloat3 _VelocitiesA;
         private ComputeBufferWrapperFloat3 _VelocitiesB;
+        private enum currentBufferState
+        { A,
+          B
+        }
+        private currentBufferState _currentBufferState;
+
         private ComputeBufferWrapperFloat3 _Accelerations;
         private ComputeBufferWrapperFloat _Densities;
         private ComputeBufferWrapperFloat _Pressures;
@@ -75,6 +82,8 @@ namespace SPH
             sphMono = gameObject.GetComponentInParent<SPHMono>();
 
 
+
+
             Vector3[] initialPositions = getInitialPositions();
             Debug.Log("Simulating " + initialPositions.Length + " particles.\n");
 
@@ -99,6 +108,31 @@ namespace SPH
 
         }
 
+        public void SwapNextCurrent()
+        {
+            if(_currentBufferState == currentBufferState.A)
+            {
+                _CurrentPositions = _PositionsB;
+                _CurrentVelocities = _VelocitiesB;
+
+                _NextPositions = _PositionsA;
+                _NextVelocities = _VelocitiesA;
+
+                _currentBufferState = currentBufferState.B;
+            }
+            else if(_currentBufferState == currentBufferState.B)
+            {
+                _CurrentPositions = _PositionsA;
+                _CurrentVelocities = _VelocitiesA;
+
+                _NextPositions = _PositionsB;
+                _NextVelocities = _VelocitiesB;
+
+                _currentBufferState = currentBufferState.A;
+            }
+
+        }
+
         // Update is called once per frame
         void FixedUpdate()
         {
@@ -113,6 +147,19 @@ namespace SPH
             _NextPositions = sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt);
             _NextPositions = sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt);
 
+            SwapNextCurrent();
+        }
+
+        void Update()
+        {
+            sphMaterial.SetBuffer(sphMaterialPositionsID, _CurrentPositions);
+            float max = Mathf.Max(containerDepth, containerHeight, containerWidth);
+            Bounds bounds = new Bounds(Vector3.zero, Vector3.one * max);
+            Graphics.DrawMeshInstancedProcedural(mesh, 0, sphMaterial, bounds, _CurrentPositions.dim);
         }
     }
+
+
+
+
 } //namespace SPH
