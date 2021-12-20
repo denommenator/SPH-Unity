@@ -1,4 +1,4 @@
-// Each #kernel tells which function to compile; you can have many kernels
+ // Each #kernel tells which function to compile; you can have many kernels
 //#pragma kernel Main
 #pragma kernel FixedPointIteration
 #pragma kernel ComputeDensity
@@ -234,7 +234,7 @@ void ComputePressure(uint p_id : SV_DispatchThreadID)
 
 	float density = _Densities[p_id];
 
-	//Cole equation of state for water at sea level
+	//Ideal Gas Law :-(
 
 	_Pressures[p_id] = k * (density - density_neutral);
 

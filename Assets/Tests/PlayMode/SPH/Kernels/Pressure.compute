@@ -1,0 +1,41 @@
+
+#include "Constants.cginc"
+
+#pragma kernel ComputePressure
+
+StructuredBuffer<float> _Densities;
+RWStructuredBuffer<float> _Pressures;
+
+//Speed of sound parameter
+float _k;
+
+uint _nBodies;
+
+//cheat factor to adjust the neutral density
+float _densityFactor;
+
+//kernel dispatch parameters
+uint3 grid_dim;
+uint3 group_dim;
+
+
+float pressure(float density_p, float k, float density_neutral)
+{
+	return k * (density_p - density_neutral);
+}
+
+[numthreads(256, 1, 1)]
+void ComputePressure(uint thread_id : SV_DispatchThreadID)
+{
+	//grid-stride loop over the particles p_id to compute each particle pressure
+	// as a function of the density alone.
+	// 
+	for (uint p_id = thread_id;
+		p_id < _nBodies;
+		p_id += grid_dim.x * group_dim.x  //the grid size, no SV variable to tell you how many groups were launched!
+		)
+	{
+		float density_neutral = particleMass * _densityFactor;
+		_Pressures[p_id] = pressure(_Densities[p_id], _k, density_neutral);
+	}
+}

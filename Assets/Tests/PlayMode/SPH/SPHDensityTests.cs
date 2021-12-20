@@ -10,7 +10,7 @@ namespace SPH
 {
     public class SPHDensityTests
     {
-        SPHTestMono SPHMono;
+        SPHMono sphMono;
 
         DensityKernel densityKernel;
 
@@ -32,10 +32,10 @@ namespace SPH
             var testObject = GameObject.Find("SPHTestGameObject");
             Assert.IsNotNull(testObject);
 
-            SPHMono = testObject.GetComponent<SPHTestMono>();
-            Assert.IsNotNull(SPHMono);
+            sphMono = testObject.GetComponent<SPHMono>();
+            Assert.IsNotNull(sphMono);
 
-            densityKernel = SPHMono.densityKernel;
+            densityKernel = sphMono.densityKernel;
 
         }
 

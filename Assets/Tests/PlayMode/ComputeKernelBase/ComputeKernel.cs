@@ -513,6 +513,13 @@ namespace SPH
             _kernelFields.Add(field);
         }
 
+        public int[] BlockDim()
+        {
+            uint X, Y, Z;
+            _computeShader.GetKernelThreadGroupSizes(_kernelNameID, out X, out Y, out Z);
+            int[] result =  { (int)X, (int)Y, (int)Z};
+            return result;
+        }
         public void AddGroupDimensionField(GroupDimensionField field)
         {
             _groupDimensionField = field;
