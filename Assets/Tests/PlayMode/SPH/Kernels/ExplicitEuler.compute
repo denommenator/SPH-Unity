@@ -1,0 +1,33 @@
+
+#include "Constants.cginc"
+
+#pragma kernel ComputeNext
+
+StructuredBuffer<float3> _Current;
+StructuredBuffer<float3> _CurrentDot;
+
+RWStructuredBuffer<float3> _Next;
+
+
+float _dt;
+uint _nBodies;
+
+//kernel dispatch parameters
+uint3 grid_dim;
+uint3 group_dim;
+
+
+[numthreads(512, 1, 1)]
+void ComputeNext(uint thread_id : SV_DispatchThreadID)
+{
+	//grid-stride loop over the particles p_id to compute each particle acceleration
+	// from the 3 forces, pressure force, viscocity force, surface tension force.
+	// 
+	for (uint p_id = thread_id;
+		p_id < _nBodies;
+		p_id += grid_dim.x * group_dim.x  //the grid size, no SV variable to tell you how many groups were launched!
+		)
+	{
+		_Next[p_id] = _Current[p_id] + _dt * _CurrentDot[p_id];
+	}
+}

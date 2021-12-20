@@ -45,10 +45,10 @@ namespace SPH
         private ComputeBufferWrapperFloat _Pressures;
         private ComputeBufferWrapperFloat3 _PressureForces;
 
-        private ComputeBufferWrapperFloat3 _CurrentPosition;
-        private ComputeBufferWrapperFloat3 _NextPosition;
-        private ComputeBufferWrapperFloat3 _CurrentVelocity;
-        private ComputeBufferWrapperFloat3 _NextVelocity;
+        private ComputeBufferWrapperFloat3 _CurrentPositions;
+        private ComputeBufferWrapperFloat3 _NextPositions;
+        private ComputeBufferWrapperFloat3 _CurrentVelocities;
+        private ComputeBufferWrapperFloat3 _NextVelocities;
 
 
 
@@ -86,10 +86,10 @@ namespace SPH
             _VelocitiesA = new ComputeBufferWrapperFloat3(initialPositions.Length);
             _VelocitiesB = new ComputeBufferWrapperFloat3(initialPositions.Length);
 
-            _CurrentPosition = _PositionsA;
-            _NextPosition = _PositionsB;
-            _CurrentVelocity = _VelocitiesA;
-            _NextVelocity = _VelocitiesB;
+            _CurrentPositions = _PositionsA;
+            _NextPositions = _PositionsB;
+            _CurrentVelocities = _VelocitiesA;
+            _NextVelocities = _VelocitiesB;
 
 
             _Accelerations = new ComputeBufferWrapperFloat3(initialPositions.Length);
@@ -100,8 +100,18 @@ namespace SPH
         }
 
         // Update is called once per frame
-        void Update()
+        void FixedUpdate()
         {
+            float dt = Time.fixedDeltaTime;
+
+            _Densities = sphMono.densityKernel.ComputeDensity(_CurrentPositions, hDensity);
+            _Pressures = sphMono.pressureKernel.ComputePressure(_Densities, k, 1);
+            _PressureForces = sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity);
+            _Accelerations = sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces);
+
+            //Explicit-Euler
+            _NextPositions = sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt);
+            _NextPositions = sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt);
 
         }
     }

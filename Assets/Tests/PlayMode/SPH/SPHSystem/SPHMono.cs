@@ -14,6 +14,8 @@ namespace SPH
         ComputeShader PressureForceShader;
         [SerializeField]
         ComputeShader AccelerationShader;
+        [SerializeField]
+        ComputeShader ExplicitEulerShader;
 
         BufferReleaser bufferReleaser;
 
@@ -22,6 +24,7 @@ namespace SPH
         public PressureKernel pressureKernel;
         public PressureForceKernel pressureForceKernel;
         public AccelerationKernel accelerationKernel;
+        public ExplicitEulerKernel explicitEulerKernel;
 
         // Start is called before the first frame update
         void Start()
@@ -31,6 +34,7 @@ namespace SPH
             pressureKernel = new PressureKernel(PressureShader);
             pressureForceKernel = new PressureForceKernel(PressureForceShader);
             accelerationKernel = new AccelerationKernel(AccelerationShader);
+            explicitEulerKernel = new ExplicitEulerKernel(ExplicitEulerShader);
 
         }
 

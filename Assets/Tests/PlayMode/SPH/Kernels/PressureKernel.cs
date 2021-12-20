@@ -37,6 +37,11 @@ namespace SPH
 
         }
 
+        public int NumBlocks(int nParticles)
+        {
+            int[] block_dim = _computeKernel.BlockDim();
+            return (nParticles + block_dim[0] - 1) / block_dim[0];
+        }
         public void Dispatch(int NBlocks)
         {
             int CappedNBlocks = Mathf.Min(NBlocks, 65_535);
@@ -56,8 +61,12 @@ namespace SPH
             _pressureKernelInternal = new PressureKernelInternal(shader);
         }
 
-        public ComputeBufferWrapperFloat ComputePressure(ComputeBufferWrapperFloat Densities, float k, float densityFactor, int NBlocks = 1_000, ComputeBufferWrapperFloat? Pressures = null)
+        public ComputeBufferWrapperFloat ComputePressure(ComputeBufferWrapperFloat Densities, float k, float densityFactor, int NBlocks = 0, ComputeBufferWrapperFloat? Pressures = null)
         {
+            if (NBlocks == 0)
+            {
+                NBlocks = _pressureKernelInternal.NumBlocks(Densities.dim);
+            }
             _pressureKernelInternal._Densities.BindBuffer(Densities);
             
             if (Pressures is ComputeBufferWrapperFloat inPressures)

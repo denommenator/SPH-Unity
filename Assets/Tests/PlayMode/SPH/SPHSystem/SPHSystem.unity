@@ -354,6 +354,8 @@ MonoBehaviour:
   Densityshader: {fileID: 7200000, guid: 84a80b712cdd2ee4a80645d201aa90cb, type: 3}
   PressureShader: {fileID: 7200000, guid: 2b75537186be48145a9ed24ae29287ab, type: 3}
   PressureForceShader: {fileID: 7200000, guid: e137f9488ff93c94ba62ced99b58cba6, type: 3}
+  AccelerationShader: {fileID: 7200000, guid: 3d8b312353e9fa54398cbda98fb9c3dc, type: 3}
+  ExplicitEulerShader: {fileID: 7200000, guid: b141ec1a0f9aac54392a186be34bdac2, type: 3}
 --- !u!4 &1654668150
 Transform:
   m_ObjectHideFlags: 0
