@@ -145,8 +145,18 @@ namespace SPH
 
             //Explicit-Euler
             _NextPositions = sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt);
-            _NextPositions = sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt);
+            _NextVelocities = sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt);
 
+
+            Vector3[] CurrentPositionsArray = (Vector3[])(_CurrentPositions);
+            Vector3[] CurrentVelocitiesArray = (Vector3[])(_CurrentVelocities);
+            Vector3[] NextPositionsArray = (Vector3[])(_NextPositions);
+            Vector3[] NextVelocitiesArray = (Vector3[])(_NextVelocities);
+
+            float[] Densities = (float[])_Densities;
+            float[] Pressures = (float[])_Pressures;
+            Vector3[] PressureForces = (Vector3[])_PressureForces;
+            Vector3[] Accelerations = (Vector3[])_Accelerations;
             SwapNextCurrent();
         }
 

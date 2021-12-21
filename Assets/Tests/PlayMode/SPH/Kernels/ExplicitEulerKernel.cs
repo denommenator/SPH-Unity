@@ -87,6 +87,7 @@ namespace SPH
 
             _kernelInternal.Dispatch(NBlocks);
 
+            Vector3[] DebugNext = (Vector3[])_kernelInternal._Next;
             return _kernelInternal._Next;
         }
     }
