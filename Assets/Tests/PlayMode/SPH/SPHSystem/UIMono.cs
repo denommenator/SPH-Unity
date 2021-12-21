@@ -138,25 +138,16 @@ namespace SPH
         {
             float dt = Time.fixedDeltaTime;
 
-            _Densities = sphMono.densityKernel.ComputeDensity(_CurrentPositions, hDensity);
-            _Pressures = sphMono.pressureKernel.ComputePressure(_Densities, k, 1);
-            _PressureForces = sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity);
-            _Accelerations = sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces);
+             sphMono.densityKernel.ComputeDensity(_CurrentPositions, hDensity, 0, _Densities);
+             sphMono.pressureKernel.ComputePressure(_Densities, k, 1, 0, _Pressures);
+             sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity, 0, _PressureForces);
+             sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, 0, _Accelerations);
 
             //Explicit-Euler
-            _NextPositions = sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt);
-            _NextVelocities = sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt);
+             sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt, 0, _NextPositions);
+             sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
 
 
-            Vector3[] CurrentPositionsArray = (Vector3[])(_CurrentPositions);
-            Vector3[] CurrentVelocitiesArray = (Vector3[])(_CurrentVelocities);
-            Vector3[] NextPositionsArray = (Vector3[])(_NextPositions);
-            Vector3[] NextVelocitiesArray = (Vector3[])(_NextVelocities);
-
-            float[] Densities = (float[])_Densities;
-            float[] Pressures = (float[])_Pressures;
-            Vector3[] PressureForces = (Vector3[])_PressureForces;
-            Vector3[] Accelerations = (Vector3[])_Accelerations;
             SwapNextCurrent();
         }
 

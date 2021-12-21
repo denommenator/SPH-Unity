@@ -338,7 +338,7 @@ MonoBehaviour:
   k: 0
   densityFactor: 1
   sphMaterial: {fileID: 2100000, guid: ba134cbe9ad00456080a61beff492244, type: 2}
-  mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!114 &1654668149
 MonoBehaviour:
   m_ObjectHideFlags: 0
