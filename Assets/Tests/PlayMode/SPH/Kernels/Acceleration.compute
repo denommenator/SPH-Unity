@@ -16,7 +16,7 @@ uint3 grid_dim;
 uint3 group_dim;
 
 
-[numthreads(256, 1, 1)]
+[numthreads(NUM_THREADS, 1, 1)]
 void ComputeAcceleration(uint thread_id : SV_DispatchThreadID)
 {
 	//grid-stride loop over the particles p_id to compute each particle acceleration

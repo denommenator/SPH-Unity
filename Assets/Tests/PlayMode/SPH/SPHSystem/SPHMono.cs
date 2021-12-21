@@ -16,6 +16,8 @@ namespace SPH
         ComputeShader AccelerationShader;
         [SerializeField]
         ComputeShader ExplicitEulerShader;
+        [SerializeField]
+        ComputeShader CollisionsShader;
 
         BufferReleaser bufferReleaser;
 
@@ -25,16 +27,19 @@ namespace SPH
         public PressureForceKernel pressureForceKernel;
         public AccelerationKernel accelerationKernel;
         public ExplicitEulerKernel explicitEulerKernel;
+        public CollisionsKernel collisionsKernel;
 
         // Start is called before the first frame update
         void Start()
         {
             bufferReleaser = gameObject.AddComponent<BufferReleaser>();
+
             densityKernel = new DensityKernel(Densityshader);
             pressureKernel = new PressureKernel(PressureShader);
             pressureForceKernel = new PressureForceKernel(PressureForceShader);
             accelerationKernel = new AccelerationKernel(AccelerationShader);
             explicitEulerKernel = new ExplicitEulerKernel(ExplicitEulerShader);
+            collisionsKernel = new CollisionsKernel(CollisionsShader);
 
         }
 

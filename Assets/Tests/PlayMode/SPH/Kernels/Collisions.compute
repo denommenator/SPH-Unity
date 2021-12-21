@@ -1,0 +1,86 @@
+
+#include "Constants.cginc"
+
+#pragma kernel ResolveCollisions
+
+RWStructuredBuffer<float3> _Positions;
+RWStructuredBuffer<float3> _Velocities;
+ 
+
+struct CollisionContainerWall
+{
+	float3 inward_normal;
+	float3 given_point;
+	float elasticity;
+};
+
+StructuredBuffer<CollisionContainerWall> _CollisionContainerWalls;
+
+uint _nBodies;
+uint _nContainerWalls;
+ 
+
+//kernel dispatch parameters
+uint3 grid_dim;
+uint3 group_dim;
+
+
+
+bool outside_wall(float3 p, CollisionContainerWall wall)
+{
+	return dot(p - wall.given_point, wall.inward_normal) < 0;
+}
+
+bool moving_away(float3 p_dot, CollisionContainerWall wall)
+{
+	return dot(p_dot, wall.inward_normal) < 0;
+}
+
+float3 reset_position(float3 p, CollisionContainerWall wall)
+{
+	float p_dot_n = dot(p - wall.given_point, wall.inward_normal);
+	//not a reflection, just move it back to the wall, and then inside
+	//by a little bit.
+	return p - p_dot_n * wall.inward_normal + epsilon * wall.inward_normal;
+	
+}
+
+float3 reflect_velocity(float3 p_dot, CollisionContainerWall wall)
+{
+	float p_dot_n = dot(p_dot, wall.inward_normal);
+	return p_dot - (1 + wall.elasticity) * p_dot_n * wall.inward_normal;
+	
+}
+
+void ResolveWallCollisions(uint thread_id, CollisionContainerWall wall)
+{
+	//grid-stride loop
+	for (uint p_id = thread_id;
+		p_id < _nBodies;
+		p_id += grid_dim.x * group_dim.x 
+		)
+	{
+		float3 p = _Positions[p_id];
+		float3 p_dot = _Velocities[p_id];
+
+		if(outside_wall(p, wall))
+		{
+			_Positions[p_id] = reset_position(p, wall);
+
+			if(moving_away(p_dot, wall))
+			{
+				_Velocities[p_id] = reflect_velocity(p_dot, wall);
+			}
+		}
+	}
+}
+
+[numthreads(NUM_THREADS,1,1)]
+void ResolveCollisions(uint thread_id : SV_DispatchThreadID)
+{
+	for(uint wall_index = 0; wall_index < _nContainerWalls; wall_index++)
+	{
+		CollisionContainerWall wall = _CollisionContainerWalls[wall_index];
+		ResolveWallCollisions(thread_id, wall);
+	}
+}

@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -56,7 +56,7 @@ namespace SPH
 
         public ComputeBufferWrapperFloat(float[] data)
         {
-            
+
 
             _BufferDim = data.Length;
             _BufferStride = sizeof(float);
@@ -108,7 +108,7 @@ namespace SPH
         {
 
             Vector3[] zero_initialized_data = new Vector3[dim];
-            for(int i=0; i<dim; i++)
+            for (int i = 0; i < dim; i++)
             {
                 zero_initialized_data[i] = Vector3.zero;
             }
@@ -143,6 +143,53 @@ namespace SPH
         public static implicit operator Vector3[](ComputeBufferWrapperFloat3 ABuffer)
         {
             Vector3[] A = new Vector3[ABuffer.dim];
+            ((ComputeBuffer)ABuffer).GetData(A);
+            return A;
+        }
+
+
+    }
+
+    public class ComputeBufferWrapperContainerWall
+    {
+        static private List<ComputeBuffer> _BufferPool;
+
+        private int _bufferPoolIndex;
+        private int _BufferDim;
+        private int _BufferStride;
+
+        public int dim => _BufferDim;
+        static ComputeBufferWrapperContainerWall()
+        {
+            _BufferPool = new List<ComputeBuffer>();
+        }
+
+        public static void ReleaseBuffers()
+        {
+            foreach (ComputeBuffer b in ComputeBufferWrapperContainerWall._BufferPool)
+            {
+                b.Release();
+            }
+        }
+
+        public ComputeBufferWrapperContainerWall(CollisionContainerWall[] data)
+        {
+            _BufferDim = data.Length;
+            _BufferStride = sizeof(float) * (3 * 2 + 1);
+            _bufferPoolIndex = ComputeBufferWrapperContainerWall._BufferPool.Count;
+
+            ComputeBuffer buffer = new ComputeBuffer(_BufferDim, _BufferStride);
+            buffer.SetData(data);
+            ComputeBufferWrapperContainerWall._BufferPool.Add(buffer);
+        }
+
+
+
+        public static implicit operator ComputeBuffer(ComputeBufferWrapperContainerWall b) => ComputeBufferWrapperContainerWall._BufferPool[b._bufferPoolIndex];
+        public static implicit operator ComputeBufferWrapperContainerWall(CollisionContainerWall[] A) => new ComputeBufferWrapperContainerWall(A);
+        public static implicit operator CollisionContainerWall[](ComputeBufferWrapperContainerWall ABuffer)
+        {
+            CollisionContainerWall[] A = new CollisionContainerWall[ABuffer.dim];
             ((ComputeBuffer)ABuffer).GetData(A);
             return A;
         }
@@ -214,16 +261,16 @@ namespace SPH
                 ((ComputeBuffer)attachedBuffer).SetData(data);
             }
             else
-                throw new System.Exception("Trying to send data to an unbound buffer from KernelBufferFieldFloat"+ _codeName);
+                throw new System.Exception("Trying to send data to an unbound buffer from KernelBufferFieldFloat" + _codeName);
 
-            
+
         }
 
         public void PreDispatch(ComputeShader shader, int kernelNameID)
         {
-            if(_attachedBuffer is null)
+            if (_attachedBuffer is null)
             {
-                throw new System.Exception("You tried to launch a kernel with an unbound KernelBufferFieldFloat "+_codeName+". Remember to Bind a buffer to this field before launching any dispatches.");
+                throw new System.Exception("You tried to launch a kernel with an unbound KernelBufferFieldFloat " + _codeName + ". Remember to Bind a buffer to this field before launching any dispatches.");
             }
             shader.SetBuffer(kernelNameID, _nameID, _attachedBuffer);
         }
@@ -307,6 +354,83 @@ namespace SPH
 
     }
 
+    public class KernelBufferFieldContainerWall : IKernelField
+    {
+        private string _codeName;
+        private int _nameID;
+        private ComputeBufferWrapperContainerWall? _attachedBuffer;
+        private int _dim;
+
+        public KernelBufferFieldContainerWall(ComputeKernel ck, string codeName)
+        {
+            _codeName = codeName;
+            _nameID = Shader.PropertyToID(_codeName);
+            _dim = 0;
+
+            ck.AddField(this);
+        }
+
+        public KernelBufferFieldContainerWall(ComputeKernel ck, string codeName, ComputeBufferWrapperContainerWall buffer)
+        {
+            _codeName = codeName;
+            _nameID = Shader.PropertyToID(_codeName);
+            _dim = buffer.dim;
+            _attachedBuffer = buffer;
+
+            ck.AddField(this);
+        }
+
+        public void BindBuffer(ComputeBufferWrapperContainerWall buffer)
+        {
+            _dim = buffer.dim;
+            _attachedBuffer = buffer;
+
+        }
+
+        public int dim => _dim;
+
+        public static implicit operator ComputeBufferWrapperContainerWall(KernelBufferFieldContainerWall bf) => bf._attachedBuffer;
+
+
+
+        public static implicit operator CollisionContainerWall[](KernelBufferFieldContainerWall bf)
+        {
+            if (bf._attachedBuffer is ComputeBufferWrapperContainerWall attachedBuffer)
+            {
+                CollisionContainerWall[] data = new CollisionContainerWall[bf._dim];
+                //use a non-blocking call for this if doing anything other than testing
+                ((ComputeBuffer)bf._attachedBuffer).GetData(data);
+                return data;
+            }
+            else
+                throw new System.Exception("Trying to read an unbound buffer from KernelBufferFieldContainerWall " + bf._codeName);
+        }
+
+        public void SetData(CollisionContainerWall[] data)
+        {
+            if (_attachedBuffer is ComputeBufferWrapperContainerWall attachedBuffer)
+            {
+                ((ComputeBuffer)attachedBuffer).SetData(data);
+            }
+            else
+                throw new System.Exception("Trying to send data to an unbound buffer from KernelBufferFieldContainerWall" + _codeName);
+
+
+        }
+
+        public void PreDispatch(ComputeShader shader, int kernelNameID)
+        {
+            if (_attachedBuffer is null)
+            {
+                throw new System.Exception("You tried to launch a kernel with an unbound KernelBufferContainerWall " + _codeName + ". Remember to Bind a buffer to this field before launching any dispatches.");
+            }
+            shader.SetBuffer(kernelNameID, _nameID, _attachedBuffer);
+        }
+
+
+    }
+
+
     public class GlobalInt : IKernelField
     {
         private string _name;
@@ -350,7 +474,7 @@ namespace SPH
             }
             else
                 throw new System.Exception("Trying to launch a Kernel with integer " + _name + " unbound");
-            
+
         }
     }
 
@@ -496,11 +620,11 @@ namespace SPH
 
 
 
-        public  ComputeKernel(ComputeShader computeShader, string kernelName)
+        public ComputeKernel(ComputeShader computeShader, string kernelName)
         {
 
             _computeShader = computeShader;
-            
+
             _kernelName = kernelName;
             _kernelNameID = computeShader.FindKernel(kernelName);
 
@@ -517,7 +641,7 @@ namespace SPH
         {
             uint X, Y, Z;
             _computeShader.GetKernelThreadGroupSizes(_kernelNameID, out X, out Y, out Z);
-            int[] result =  { (int)X, (int)Y, (int)Z};
+            int[] result = { (int)X, (int)Y, (int)Z };
             return result;
         }
         public void AddGroupDimensionField(GroupDimensionField field)
@@ -534,11 +658,11 @@ namespace SPH
         public void Dispatch(int x, int y, int z)
         {
 
-            
+
 
             if (_gridDimensionField is GridDimensionField gridDimensionField)
             {
-                _computeShader.SetInts(gridDimensionField.nameID,  x, y, z);
+                _computeShader.SetInts(gridDimensionField.nameID, x, y, z);
             }
 
             if (_groupDimensionField is GroupDimensionField groupDimensionField)
