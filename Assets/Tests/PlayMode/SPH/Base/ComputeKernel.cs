@@ -10,6 +10,8 @@ namespace SPH
         public static void ReleaseAllBuffers()
         {
             ComputeBufferWrapperFloat.ReleaseBuffers();
+            ComputeBufferWrapperFloat3.ReleaseBuffers();
+            ComputeBufferWrapperContainerWall.ReleaseBuffers();
         }
 
         public void OnDestroy()

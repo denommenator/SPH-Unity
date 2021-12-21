@@ -11,6 +11,7 @@ namespace SPH
         public float containerHeight = 15;
         public float containerWidth = 40;
         public float containerDepth = 5;
+        public float wall_elasticity = 1.0f;
 
 
         [SerializeField, Range(0, 50)]
@@ -57,6 +58,7 @@ namespace SPH
         private ComputeBufferWrapperFloat3 _CurrentVelocities;
         private ComputeBufferWrapperFloat3 _NextVelocities;
 
+        private ComputeBufferWrapperContainerWall _ContainerWalls;
 
 
         Vector3[] getInitialPositions()
@@ -81,7 +83,7 @@ namespace SPH
             //JANKY
             sphMono = gameObject.GetComponentInParent<SPHMono>();
 
-
+            _ContainerWalls = new ComputeBufferWrapperContainerWall(CollisionContainers.BoxContainer(containerWidth, containerHeight, containerDepth, wall_elasticity));
 
 
             Vector3[] initialPositions = getInitialPositions();
@@ -147,7 +149,8 @@ namespace SPH
              sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt, 0, _NextPositions);
              sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
 
-
+            sphMono.collisionsKernel.ResolveCollisions(_NextPositions, _NextVelocities, _ContainerWalls);
+    
             SwapNextCurrent();
         }
 
