@@ -8,14 +8,16 @@ namespace SPH
     {
         private SPHMono sphMono;
 
-        public float containerHeight = 15;
-        public float containerWidth = 40;
+        public float containerHeight = 40;
+        public float containerWidth = 70;
         public float containerDepth = 5;
+
+        [SerializeField, Range(0.0f, 1.0f)]
         public float wall_elasticity = 1.0f;
 
 
         [SerializeField, Range(0, 50)]
-        public float initialParticleHeight = 5.0f;
+        public float initialParticleHeight = 10.0f;
 
         [SerializeField, Range(0, 10.0f)]
         float hDensity = 2.0f;
@@ -29,7 +31,7 @@ namespace SPH
         [SerializeField, Range(0, 10.0f)]
         float initialParticleSeparation = 1.0f;
 
-        [SerializeField, Range(0, 10.0f)]
+        [SerializeField, Range(0, 1_000.0f)]
         float k = 10.0f;
 
         [SerializeField, Range(0, 10.0f)]
@@ -158,8 +160,10 @@ namespace SPH
              sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, _ViscosityForces, g, 0, _Accelerations);
 
             //Explicit-Euler
-             sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt, 0, _NextPositions);
-             sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
+            sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
+
+            sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt, 0, _NextPositions);
+            // sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
 
             sphMono.collisionsKernel.ResolveCollisions(_NextPositions, _NextVelocities, _ContainerWalls);
     
