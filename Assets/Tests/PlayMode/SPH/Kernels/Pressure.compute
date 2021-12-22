@@ -21,7 +21,9 @@ uint3 group_dim;
 
 float pressure(float density_p, float k, float density_neutral)
 {
-	return k * (density_p - density_neutral);
+	float gamma = 3.0f;
+	float c = 5.0f;
+	return (density_neutral * c * c / gamma) * (pow(density_p / density_neutral, gamma) - 1);
 }
 
 [numthreads(256, 1, 1)]
