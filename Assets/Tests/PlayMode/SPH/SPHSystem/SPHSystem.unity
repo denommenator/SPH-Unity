@@ -338,11 +338,11 @@ MonoBehaviour:
   hDensity: 2
   hViscosity: 2
   hSurfaceTension: 2
-  mu: 1700
-  sigma: 500
-  k: 100
+  mu: 0
+  sigma: 0
+  k: 0
   g: 10
-  surfaceTensionThreshold: 0.4
+  surfaceTensionThreshold: 2
   sphMaterial: {fileID: 2100000, guid: ba134cbe9ad00456080a61beff492244, type: 2}
   mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!114 &1654668149

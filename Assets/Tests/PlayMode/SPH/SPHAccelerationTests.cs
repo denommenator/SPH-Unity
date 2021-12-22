@@ -99,7 +99,7 @@ namespace SPH
 
             Vector3[] pressureForces = { Vector3.forward };
             Vector3[] viscosityForces = { Vector3.zero };
-            Vector3[] surfaceForces = { Vector3.zero };
+            Vector3[] surfaceForces = { Vector3.up };
 
             float[] densities = { 2000.0f };
 
@@ -112,9 +112,9 @@ namespace SPH
 
             Assert.AreEqual(1, accelerations.Length);
 
-            Assert.AreEqual(0.0f, accelerations[0][0], .001);
-            Assert.AreEqual(0.0f, accelerations[0][1], .001);
-            Assert.AreEqual(1.0f / 2_000.0f, accelerations[0][2], .001);
+            Assert.AreEqual(0.0f, accelerations[0][0], .0001);
+            Assert.AreEqual(1.0f / 2_000.0f, accelerations[0][1], .0001);
+            Assert.AreEqual(1.0f / 2_000.0f, accelerations[0][2], .0001);
 
         }
 

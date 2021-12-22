@@ -158,6 +158,8 @@ MonoBehaviour:
   AccelerationShader: {fileID: 7200000, guid: 3d8b312353e9fa54398cbda98fb9c3dc, type: 3}
   ExplicitEulerShader: {fileID: 7200000, guid: b141ec1a0f9aac54392a186be34bdac2, type: 3}
   CollisionsShader: {fileID: 7200000, guid: 1ad2dc5a860c44ab4a499fca3261111c, type: 3}
+  ViscosityShader: {fileID: 7200000, guid: 860a3117cd46f7d4785d6f00b63d3366, type: 3}
+  SurfaceTensionShader: {fileID: 7200000, guid: f655f688357f64732ac5e63ac0efc57e, type: 3}
 --- !u!4 &163112102
 Transform:
   m_ObjectHideFlags: 0

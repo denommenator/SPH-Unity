@@ -1,6 +1,6 @@
 //likely needs to be half, since we are storing two groupshared buffers!
 
-#define group_dim_pow_2 512
+#define group_dim_pow_2 256
 
 #pragma kernel ComputeSurfaceForce
 

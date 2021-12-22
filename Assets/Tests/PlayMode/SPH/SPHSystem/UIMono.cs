@@ -167,7 +167,7 @@ namespace SPH
              sphMono.pressureKernel.ComputePressure(_Densities, k, 1, 0, _Pressures);
              sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity, 0, _PressureForces);
              sphMono.viscosityKernel.ComputeViscosityForce(_CurrentPositions, _CurrentVelocities, _Densities, hViscosity, mu, _ViscosityForces);
-            sphMono.surfaceTensionKernel.ComputeSurfaceForce(_CurrentPositions, _Densities, hSurfaceTension, sigma, surfaceTensionThreshold, _SurfaceForces);
+             sphMono.surfaceTensionKernel.ComputeSurfaceForce(_CurrentPositions, _Densities, hSurfaceTension, sigma, surfaceTensionThreshold, _SurfaceForces);
              sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, _ViscosityForces, _SurfaceForces, g, 0, _Accelerations);
 
             //Explicit-Euler
