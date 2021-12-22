@@ -23,7 +23,7 @@ namespace SPH
         [SerializeField, Range(0, 10.0f)]
         float hViscosity = 2.0f;
 
-        [SerializeField, Range(0, 1_000_000.0f)]
+        [SerializeField, Range(0, 10_000.0f)]
         float mu = 500.0f;
 
         [SerializeField, Range(0, 10.0f)]
