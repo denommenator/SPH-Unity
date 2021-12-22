@@ -138,7 +138,10 @@ namespace SPH
 
         }
 
-
+        public void SetData(Vector3[] data)
+        {
+            ComputeBufferWrapperFloat3._BufferPool[_bufferPoolIndex].SetData(data);
+        }
 
         public static implicit operator ComputeBuffer(ComputeBufferWrapperFloat3 b) => ComputeBufferWrapperFloat3._BufferPool[b._bufferPoolIndex];
         public static implicit operator ComputeBufferWrapperFloat3(Vector3[] A) => new ComputeBufferWrapperFloat3(A);
@@ -185,6 +188,10 @@ namespace SPH
             ComputeBufferWrapperContainerWall._BufferPool.Add(buffer);
         }
 
+        public void SetData(CollisionContainerWall[] data)
+        {
+            ComputeBufferWrapperContainerWall._BufferPool[_bufferPoolIndex].SetData(data);
+        }
 
 
         public static implicit operator ComputeBuffer(ComputeBufferWrapperContainerWall b) => ComputeBufferWrapperContainerWall._BufferPool[b._bufferPoolIndex];
@@ -629,6 +636,10 @@ namespace SPH
 
             _kernelName = kernelName;
             _kernelNameID = computeShader.FindKernel(kernelName);
+            if(_kernelNameID < 0)
+            {
+                Debug.Log("Couldn't find kernel: " + kernelName);
+            }
 
             _kernelFields = new List<IKernelField>();
 

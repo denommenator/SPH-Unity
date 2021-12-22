@@ -49,12 +49,15 @@ namespace SPH
 
             Vector3[] pressureForces = { Vector3.forward };
             Vector3[] viscosityForces = { Vector3.zero };
+            Vector3[] surfaceForces = { Vector3.zero };
+
             float[] densities = { 2000.0f };
 
 
             Vector3[] accelerations = accelerationKernel.ComputeAcceleration(densities,
                                                                              pressureForces,
                                                                              viscosityForces,
+                                                                             surfaceForces,
                                                                              0.0f);
 
             Assert.AreEqual(1, accelerations.Length);
@@ -71,12 +74,15 @@ namespace SPH
 
             Vector3[] pressureForces = { Vector3.forward };
             Vector3[] viscosityForces = { Vector3.zero };
+            Vector3[] surfaceForces = { Vector3.zero };
+
             float[] densities = { 2000.0f };
 
 
             Vector3[] accelerations = accelerationKernel.ComputeAcceleration(densities,
                                                                              pressureForces,
                                                                              viscosityForces,
+                                                                             surfaceForces,
                                                                              10.0f);
 
             Assert.AreEqual(1, accelerations.Length);
@@ -93,6 +99,7 @@ namespace SPH
 
             Vector3[] pressureForces = { Vector3.forward };
             Vector3[] viscosityForces = { Vector3.zero };
+            Vector3[] surfaceForces = { Vector3.zero };
 
             float[] densities = { 2000.0f };
 
@@ -100,6 +107,7 @@ namespace SPH
             Vector3[] accelerations = accelerationKernel.ComputeAcceleration(densities,
                                                                              pressureForces,
                                                                              viscosityForces,
+                                                                             surfaceForces,
                                                                              0.0f, 1);
 
             Assert.AreEqual(1, accelerations.Length);

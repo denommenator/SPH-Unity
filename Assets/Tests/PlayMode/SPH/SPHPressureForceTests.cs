@@ -46,7 +46,7 @@ namespace SPH
         [Test]
         public void OneParticle()
         {
-            float hDensity = 1.0f;
+            //float hDensity = 1.0f;
 
             Vector3[] positions = { Vector3.zero };
             float[] densities = { 2000.0f };

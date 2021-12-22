@@ -10,6 +10,7 @@ namespace SPH
 
         public KernelBufferFieldFloat3 _PressureForces;
         public KernelBufferFieldFloat3 _ViscosityForces;
+        public KernelBufferFieldFloat3 _SurfaceForces;
         public KernelBufferFieldFloat _Densities;
         public KernelBufferFieldFloat3 _Accelerations;
 
@@ -29,6 +30,7 @@ namespace SPH
             _Densities = new KernelBufferFieldFloat(_computeKernel, "_Densities");
             _PressureForces = new KernelBufferFieldFloat3(_computeKernel, "_PressureForces");
             _ViscosityForces = new KernelBufferFieldFloat3(_computeKernel, "_ViscosityForces");
+            _SurfaceForces = new KernelBufferFieldFloat3(_computeKernel, "_SurfaceForces");
             _Accelerations = new KernelBufferFieldFloat3(_computeKernel, "_Accelerations");
 
             _nBodies = new GlobalInt(_computeKernel, "_nBodies");
@@ -64,7 +66,7 @@ namespace SPH
             _accelerationKernelInternal = new AccelerationKernelInternal(shader);
         }
 
-        public ComputeBufferWrapperFloat3 ComputeAcceleration(ComputeBufferWrapperFloat Densities, ComputeBufferWrapperFloat3 PressureForces, ComputeBufferWrapperFloat3 ViscosityForces, float g, int NBlocks = 0, ComputeBufferWrapperFloat3? Accelerations = null)
+        public ComputeBufferWrapperFloat3 ComputeAcceleration(ComputeBufferWrapperFloat Densities, ComputeBufferWrapperFloat3 PressureForces, ComputeBufferWrapperFloat3 ViscosityForces, ComputeBufferWrapperFloat3 SurfaceForces, float g, int NBlocks = 0, ComputeBufferWrapperFloat3? Accelerations = null)
         {
             if(NBlocks == 0)
             {
@@ -73,6 +75,7 @@ namespace SPH
             _accelerationKernelInternal._Densities.BindBuffer(Densities);
             _accelerationKernelInternal._PressureForces.BindBuffer(PressureForces);
             _accelerationKernelInternal._ViscosityForces.BindBuffer(ViscosityForces);
+            _accelerationKernelInternal._SurfaceForces.BindBuffer(SurfaceForces);
 
             if (Accelerations is ComputeBufferWrapperFloat3 inAccelerations)
             {

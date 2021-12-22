@@ -11,6 +11,11 @@ namespace SPH
         public float containerHeight = 40;
         public float containerWidth = 70;
         public float containerDepth = 5;
+        float initialParticleSeparation = 1.0f;
+
+        //location is a percentage of containerWidth
+        [SerializeField, Range(0.0f, 0.25f)]
+        public float pushWallLocation = 0.0f;
 
         [SerializeField, Range(0.0f, 1.0f)]
         public float wall_elasticity = 1.0f;
@@ -25,11 +30,14 @@ namespace SPH
         [SerializeField, Range(0, 10.0f)]
         float hViscosity = 2.0f;
 
+        [SerializeField, Range(0, 10.0f)]
+        float hSurfaceTension = 2.0f;
+
         [SerializeField, Range(0, 10_000.0f)]
         float mu = 500.0f;
 
-        [SerializeField, Range(0, 10.0f)]
-        float initialParticleSeparation = 1.0f;
+        [SerializeField, Range(0, 10_000.0f)]
+        float sigma = 500.0f;
 
         [SerializeField, Range(0, 1_000.0f)]
         float k = 10.0f;
@@ -37,8 +45,8 @@ namespace SPH
         [SerializeField, Range(0, 10.0f)]
         float g = 0.0f;
 
-        [SerializeField, Range(0, 1.0f)]
-        float densityFactor = 1.0f;
+        [SerializeField, Range(0.0f, 2.0f)]
+        float surfaceTensionThreshold = 0.4f;
 
         [SerializeField]
         Material sphMaterial;
@@ -63,6 +71,7 @@ namespace SPH
         private ComputeBufferWrapperFloat _Pressures;
         private ComputeBufferWrapperFloat3 _PressureForces;
         private ComputeBufferWrapperFloat3 _ViscosityForces;
+        private ComputeBufferWrapperFloat3 _SurfaceForces;
 
         private ComputeBufferWrapperFloat3 _CurrentPositions;
         private ComputeBufferWrapperFloat3 _NextPositions;
@@ -94,7 +103,7 @@ namespace SPH
             //JANKY
             sphMono = gameObject.GetComponentInParent<SPHMono>();
 
-            _ContainerWalls = new ComputeBufferWrapperContainerWall(CollisionContainers.BoxContainer(containerWidth, containerHeight, containerDepth, wall_elasticity));
+            _ContainerWalls = new ComputeBufferWrapperContainerWall(CollisionContainers.BoxContainer(containerWidth, containerHeight, containerDepth, wall_elasticity, pushWallLocation));
 
 
             Vector3[] initialPositions = getInitialPositions();
@@ -109,6 +118,7 @@ namespace SPH
             _VelocitiesB = new ComputeBufferWrapperFloat3(initialPositions.Length);
 
             _ViscosityForces = new ComputeBufferWrapperFloat3(initialPositions.Length);
+            _SurfaceForces = new ComputeBufferWrapperFloat3(initialPositions.Length);
 
             _CurrentPositions = _PositionsA;
             _NextPositions = _PositionsB;
@@ -156,8 +166,9 @@ namespace SPH
              sphMono.densityKernel.ComputeDensity(_CurrentPositions, hDensity, 0, _Densities);
              sphMono.pressureKernel.ComputePressure(_Densities, k, 1, 0, _Pressures);
              sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity, 0, _PressureForces);
-            sphMono.viscosityKernel.ComputeViscosityForce(_CurrentPositions, _CurrentVelocities, _Densities, hViscosity, mu, _ViscosityForces);
-             sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, _ViscosityForces, g, 0, _Accelerations);
+             sphMono.viscosityKernel.ComputeViscosityForce(_CurrentPositions, _CurrentVelocities, _Densities, hViscosity, mu, _ViscosityForces);
+            sphMono.surfaceTensionKernel.ComputeSurfaceForce(_CurrentPositions, _Densities, hSurfaceTension, sigma, surfaceTensionThreshold, _SurfaceForces);
+             sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, _ViscosityForces, _SurfaceForces, g, 0, _Accelerations);
 
             //Explicit-Euler
             sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
@@ -172,11 +183,15 @@ namespace SPH
 
         void Update()
         {
+            _ContainerWalls.SetData(CollisionContainers.BoxContainer(containerWidth, containerHeight, containerDepth, wall_elasticity, pushWallLocation));
+
             sphMaterial.SetBuffer(sphMaterialPositionsID, _CurrentPositions);
             float max = Mathf.Max(containerDepth, containerHeight, containerWidth);
             Bounds bounds = new Bounds(Vector3.zero, Vector3.one * max);
             Graphics.DrawMeshInstancedProcedural(mesh, 0, sphMaterial, bounds, _CurrentPositions.dim);
         }
+
+       
     }
 
 

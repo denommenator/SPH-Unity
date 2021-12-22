@@ -20,6 +20,8 @@ namespace SPH
         ComputeShader CollisionsShader;
         [SerializeField]
         ComputeShader ViscosityShader;
+        [SerializeField]
+        ComputeShader SurfaceTensionShader;
 
         BufferReleaser bufferReleaser;
 
@@ -31,6 +33,7 @@ namespace SPH
         public ExplicitEulerKernel explicitEulerKernel;
         public CollisionsKernel collisionsKernel;
         public ViscosityKernel viscosityKernel;
+        public SurfaceTensionKernel surfaceTensionKernel;
 
         // Start is called before the first frame update
         void Start()
@@ -44,6 +47,7 @@ namespace SPH
             explicitEulerKernel = new ExplicitEulerKernel(ExplicitEulerShader);
             collisionsKernel = new CollisionsKernel(CollisionsShader);
             viscosityKernel = new ViscosityKernel(ViscosityShader);
+            surfaceTensionKernel = new SurfaceTensionKernel(SurfaceTensionShader);
 
         }
 

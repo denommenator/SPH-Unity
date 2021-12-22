@@ -15,7 +15,7 @@ namespace SPH
     public class CollisionContainers
     {
 
-        static public CollisionContainerWall[] BoxContainer(float width, float height, float depth, float wallElasticity)
+        static public CollisionContainerWall[] BoxContainer(float width, float height, float depth, float wallElasticity, float pushWallLocation = 0.0f)
         {
             CollisionContainerWall wall_lower, wall_upper, wall_left, wall_right, wall_back, wall_front;
 
@@ -36,7 +36,7 @@ namespace SPH
             wall_left = new CollisionContainerWall
             {
                 inward_normal = Vector3.right,
-                point = width / 2 * Vector3.left,
+                point = width / 2 * Vector3.left + pushWallLocation * width * Vector3.right,
                 elasticity = wallElasticity
             };
 
