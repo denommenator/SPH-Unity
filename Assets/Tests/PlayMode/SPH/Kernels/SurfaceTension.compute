@@ -65,8 +65,8 @@ void ComputeSurfaceForce(uint group_thread_id : SV_GroupThreadID, uint group_id 
 			q_id += group_dim.x)
 		{
 			float3 q = _Positions[q_id];
-			gradient_thread_id_orbit += particleMass /_Densities[q_id] * W_poly_gradient(p - q, _hSurfaceTension);
-			laplacian_thread_id_orbit += particleMass /_Densities[q_id] * W_poly_laplacian(p - q, _hSurfaceTension);
+			gradient_thread_id_orbit += ( particleMass /_Densities[q_id]) * W_poly_gradient(p - q, _hSurfaceTension);
+			laplacian_thread_id_orbit += (particleMass /_Densities[q_id]) * W_poly_laplacian(p - q, _hSurfaceTension);
 		}
 
 		gradient_thread_id_orbits[group_thread_id.x] = gradient_thread_id_orbit;
@@ -94,7 +94,15 @@ void ComputeSurfaceForce(uint group_thread_id : SV_GroupThreadID, uint group_id 
 		}
 		float color_field_laplacian_p = laplacian_thread_id_orbits[0];
 		float3 color_field_gradient_p = gradient_thread_id_orbits[0];
-		float threshold_switch = step(_surfaceTensionThreshold, length(color_field_gradient_p));
-		_SurfaceForces[p_id] = -_sigma * threshold_switch * color_field_laplacian_p * normalize(color_field_gradient_p);
+		//float threshold_switch = 0.0f; step(_surfaceTensionThreshold, length(color_field_gradient_p));
+
+		if(length(color_field_gradient_p) < _surfaceTensionThreshold)
+		{
+			_SurfaceForces[p_id] = zero_vec;
+		}
+		else
+		{
+			_SurfaceForces[p_id] = -_sigma * color_field_laplacian_p * normalize(color_field_gradient_p);
+		}
 	}
 }

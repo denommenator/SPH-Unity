@@ -53,7 +53,7 @@ namespace SPH
             float[] pressures = { 2000.0f };
 
 
-            Vector3[] surfaceForces = surfaceTensionKernel.ComputeSurfaceForce(positions, densities, 1.0f, 1.0f, 0.0f);
+            Vector3[] surfaceForces = surfaceTensionKernel.ComputeSurfaceForce(positions, densities, 1.0f, 1.0f, 0.3f);
 
             Debug.Log(surfaceForces[0].ToString());
 
