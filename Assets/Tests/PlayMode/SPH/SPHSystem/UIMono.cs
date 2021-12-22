@@ -8,6 +8,9 @@ namespace SPH
     {
         private SPHMono sphMono;
 
+        [SerializeField]
+        public int iterationsPerFrame = 1;
+
         public float containerHeight = 40;
         public float containerWidth = 70;
         public float containerDepth = 5;
@@ -18,7 +21,7 @@ namespace SPH
         public float pushWallLocation = 0.0f;
 
         [SerializeField, Range(0.0f, 1.0f)]
-        public float wall_elasticity = 1.0f;
+        public float wall_elasticity = 0.7f;
 
 
         [SerializeField, Range(0, 50)]
@@ -34,19 +37,19 @@ namespace SPH
         float hSurfaceTension = 2.0f;
 
         [SerializeField, Range(0, 10_000.0f)]
-        float mu = 500.0f;
+        float mu = 1500.0f;
 
         [SerializeField, Range(0, 10_000.0f)]
-        float sigma = 500.0f;
+        float sigma = 1500.0f;
 
         [SerializeField, Range(0, 1_000.0f)]
-        float k = 10.0f;
+        float k = 150.0f;
 
         [SerializeField, Range(0, 10.0f)]
-        float g = 0.0f;
+        float g = 9.81f;
 
         [SerializeField, Range(0.0f, 2.0f)]
-        float surfaceTensionThreshold = 0.4f;
+        float surfaceTensionThreshold = 0.2f;
 
         [SerializeField]
         Material sphMaterial;
@@ -161,24 +164,28 @@ namespace SPH
         // Update is called once per frame
         void FixedUpdate()
         {
-            float dt = Time.fixedDeltaTime;
 
-             sphMono.densityKernel.ComputeDensity(_CurrentPositions, hDensity, 0, _Densities);
-             sphMono.pressureKernel.ComputePressure(_Densities, k, 1, 0, _Pressures);
-             sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity, 0, _PressureForces);
-             sphMono.viscosityKernel.ComputeViscosityForce(_CurrentPositions, _CurrentVelocities, _Densities, hViscosity, mu, _ViscosityForces);
-             sphMono.surfaceTensionKernel.ComputeSurfaceForce(_CurrentPositions, _Densities, hSurfaceTension, sigma, surfaceTensionThreshold, _SurfaceForces);
-             sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, _ViscosityForces, _SurfaceForces, g, 0, _Accelerations);
+            float dt = Time.fixedDeltaTime / iterationsPerFrame;
 
-            //Explicit-Euler
-            sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
+            for (int i = 0; i < iterationsPerFrame; i++)
+            {
+                sphMono.densityKernel.ComputeDensity(_CurrentPositions, hDensity, 0, _Densities);
+                sphMono.pressureKernel.ComputePressure(_Densities, k, 1, 0, _Pressures);
+                sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity, 0, _PressureForces);
+                sphMono.viscosityKernel.ComputeViscosityForce(_CurrentPositions, _CurrentVelocities, _Densities, hViscosity, mu, _ViscosityForces);
+                sphMono.surfaceTensionKernel.ComputeSurfaceForce(_CurrentPositions, _Densities, hSurfaceTension, sigma, surfaceTensionThreshold, _SurfaceForces);
+                sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, _ViscosityForces, _SurfaceForces, g, 0, _Accelerations);
 
-            sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt, 0, _NextPositions);
-            // sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
+                //Explicit-Euler
+                sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
 
-            sphMono.collisionsKernel.ResolveCollisions(_NextPositions, _NextVelocities, _ContainerWalls);
-    
-            SwapNextCurrent();
+                sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt, 0, _NextPositions);
+                // sphMono.explicitEulerKernel.ComputeNext(_CurrentVelocities, _Accelerations, dt, 0, _NextVelocities);
+
+                sphMono.collisionsKernel.ResolveCollisions(_NextPositions, _NextVelocities, _ContainerWalls);
+
+                SwapNextCurrent();
+            }
         }
 
         void Update()

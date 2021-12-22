@@ -329,20 +329,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 354f90a96b9a53242aad73989806bb7c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  iterationsPerFrame: 1
   containerHeight: 40
   containerWidth: 70
   containerDepth: 5
   pushWallLocation: 0
-  wall_elasticity: 1
+  wall_elasticity: 0.7
   initialParticleHeight: 10
   hDensity: 2
   hViscosity: 2
   hSurfaceTension: 2
-  mu: 0
-  sigma: 0
-  k: 0
-  g: 10
-  surfaceTensionThreshold: 2
+  mu: 1500
+  sigma: 1500
+  k: 150
+  g: 9.81
+  surfaceTensionThreshold: 0.2
   sphMaterial: {fileID: 2100000, guid: ba134cbe9ad00456080a61beff492244, type: 2}
   mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!114 &1654668149
