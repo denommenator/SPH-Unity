@@ -20,6 +20,11 @@ namespace SPH
         [SerializeField, Range(0, 10.0f)]
         float hDensity = 2.0f;
 
+        [SerializeField, Range(0, 10.0f)]
+        float hViscosity = 2.0f;
+
+        [SerializeField, Range(0, 1_000_000.0f)]
+        float mu = 500.0f;
 
         [SerializeField, Range(0, 10.0f)]
         float initialParticleSeparation = 1.0f;
@@ -55,6 +60,7 @@ namespace SPH
         private ComputeBufferWrapperFloat _Densities;
         private ComputeBufferWrapperFloat _Pressures;
         private ComputeBufferWrapperFloat3 _PressureForces;
+        private ComputeBufferWrapperFloat3 _ViscosityForces;
 
         private ComputeBufferWrapperFloat3 _CurrentPositions;
         private ComputeBufferWrapperFloat3 _NextPositions;
@@ -99,6 +105,8 @@ namespace SPH
 
             _VelocitiesA = new ComputeBufferWrapperFloat3(initialPositions.Length);
             _VelocitiesB = new ComputeBufferWrapperFloat3(initialPositions.Length);
+
+            _ViscosityForces = new ComputeBufferWrapperFloat3(initialPositions.Length);
 
             _CurrentPositions = _PositionsA;
             _NextPositions = _PositionsB;
@@ -146,7 +154,8 @@ namespace SPH
              sphMono.densityKernel.ComputeDensity(_CurrentPositions, hDensity, 0, _Densities);
              sphMono.pressureKernel.ComputePressure(_Densities, k, 1, 0, _Pressures);
              sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity, 0, _PressureForces);
-             sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, g, 0, _Accelerations);
+            sphMono.viscosityKernel.ComputeViscosityForce(_CurrentPositions, _CurrentVelocities, _Densities, hViscosity, mu, _ViscosityForces);
+             sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, _ViscosityForces, g, 0, _Accelerations);
 
             //Explicit-Euler
              sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt, 0, _NextPositions);

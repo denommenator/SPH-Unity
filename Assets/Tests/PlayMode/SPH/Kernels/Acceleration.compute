@@ -5,6 +5,7 @@
 
 StructuredBuffer<float> _Densities;
 StructuredBuffer<float3> _PressureForces;
+StructuredBuffer<float3> _ViscosityForces;
 
 RWStructuredBuffer<float3> _Accelerations;
 
@@ -29,6 +30,6 @@ void ComputeAcceleration(uint thread_id : SV_DispatchThreadID)
 		p_id += grid_dim.x * group_dim.x  //the grid size, no SV variable to tell you how many groups were launched!
 		)
 	{
-		_Accelerations[p_id] = (_PressureForces[p_id]) / _Densities[p_id] + g_down;
+		_Accelerations[p_id] = (_PressureForces[p_id] + _ViscosityForces[p_id]) / _Densities[p_id] + g_down;
 	}
 }

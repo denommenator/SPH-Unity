@@ -1,0 +1,80 @@
+#define group_dim_pow_2 512
+
+#pragma kernel ComputeViscosity
+
+
+#include "Constants.cginc"
+#include "SmoothingKernels.cginc"
+
+
+StructuredBuffer<float3> _Positions;
+StructuredBuffer<float3> _Velocities;
+StructuredBuffer<float> _Densities;
+
+RWStructuredBuffer<float3> _ViscosityForces;
+
+float _hViscosity;
+float _mu;
+uint _nBodies;
+
+
+uint3 grid_dim;
+uint3 group_dim;
+
+groupshared float thread_id_orbits[group_dim_pow_2];
+
+
+[numthreads(group_dim_pow_2, 1, 1)]
+void ComputeViscosity(uint group_thread_id : SV_GroupThreadID, uint group_id : SV_GroupID)
+{
+	//grid_dim-stride loop over the particles p_id to compute each particle density.
+	//i.e. each block will computes the density at only 1 particle if we have enough blocks. 
+	// Since we might run out
+	//of blocks due to the maximum # of blocks being less than 1m, we recycle the blocks
+	//and stride over the #grid_dim.
+	for (uint p_id = group_id;
+		p_id < _nBodies;
+		p_id += grid_dim.x)
+	{
+		float h = _hViscosity;
+		float3 p = _Positions[p_id];
+
+		float thread_id_orbit = 0.0f;
+
+		//flatten the contributions from neighbor particles, q_id
+		//to an array of size equal to the number of threads per block
+		//which is required to be a power of 2.
+		//This is a block-stride loop, indexed by group_thread_id's and
+		//containing the +group_dim-orbits of the density contributions of q_ids
+		for (uint q_id = group_thread_id; 
+			q_id < _nBodies; 
+			q_id += group_dim.x)
+		{
+			float3 q = _Positions[q_id];
+			thread_id_orbit += (_Velocities[q_id] - _Velocities[p_id])/_Densities[q_id] * W_viscosity_laplacian(p - q, _hViscosity);
+		}
+
+		thread_id_orbits[group_thread_id.x] = thread_id_orbit;
+
+		//I was warned by MS HLSL docs not to use this due to portability...
+		GroupMemoryBarrierWithGroupSync();
+
+		//now cooperatively sum the partial sums from the previous loop,
+		// each thread adds two members together, leaving only half the values each iteration.
+		//This requires the number of groupThreads to be a power of 2.
+		//The total sum remains in density_thread_id_orbits[0]
+
+		uint i = group_dim.x / 2;
+		while (i != 0)
+		{
+			if (group_thread_id.x < i)
+			{
+				thread_id_orbits[group_thread_id.x] += thread_id_orbits[group_thread_id.x + i];
+			}
+			GroupMemoryBarrierWithGroupSync();
+			i /= 2;
+		}
+
+		_ViscosityForces[p_id] = _mu * particleMass * thread_id_orbits[0];
+	}
+}

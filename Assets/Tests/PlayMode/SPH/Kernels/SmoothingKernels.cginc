@@ -13,7 +13,7 @@ float3 W_gaussian_gradient(float3 r_vec, float h)
 	return -2.0f * W_gaussian(r_vec, h) * (r_vec) / pow(h , 2);
 }
 
-float W_viscocity_laplacian(float3 r_vec,float h)
+float W_viscosity_laplacian(float3 r_vec,float h)
 {
 	float r = length(r_vec);
 	float result = 0.0f;

@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.44657815, g: 0.49641192, b: 0.57481617, a: 1}
+  m_IndirectSpecularColor: {r: 0.44657898, g: 0.4964133, b: 0.5748178, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -335,8 +335,11 @@ MonoBehaviour:
   wall_elasticity: 1
   initialParticleHeight: 5
   hDensity: 2
+  hViscosity: 2
+  mu: 500
   initialParticleSeparation: 1
   k: 0
+  g: 0
   densityFactor: 1
   sphMaterial: {fileID: 2100000, guid: ba134cbe9ad00456080a61beff492244, type: 2}
   mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
@@ -358,6 +361,7 @@ MonoBehaviour:
   AccelerationShader: {fileID: 7200000, guid: 3d8b312353e9fa54398cbda98fb9c3dc, type: 3}
   ExplicitEulerShader: {fileID: 7200000, guid: b141ec1a0f9aac54392a186be34bdac2, type: 3}
   CollisionsShader: {fileID: 7200000, guid: 1ad2dc5a860c44ab4a499fca3261111c, type: 3}
+  ViscosityShader: {fileID: 7200000, guid: 860a3117cd46f7d4785d6f00b63d3366, type: 3}
 --- !u!4 &1654668150
 Transform:
   m_ObjectHideFlags: 0
