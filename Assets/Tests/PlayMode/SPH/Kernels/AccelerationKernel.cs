@@ -13,6 +13,7 @@ namespace SPH
         public KernelBufferFieldFloat3 _Accelerations;
 
         public GlobalInt _nBodies;
+        public GlobalFloat _g;
 
 
         GridDimensionField grid_dim;
@@ -29,6 +30,7 @@ namespace SPH
             _Accelerations = new KernelBufferFieldFloat3(_computeKernel, "_Accelerations");
 
             _nBodies = new GlobalInt(_computeKernel, "_nBodies");
+            _g = new GlobalFloat(_computeKernel, "_g");
 
             grid_dim = new GridDimensionField(_computeKernel, "grid_dim");
             group_dim = new GroupDimensionField(_computeKernel, "group_dim");
@@ -60,7 +62,7 @@ namespace SPH
             _accelerationKernelInternal = new AccelerationKernelInternal(shader);
         }
 
-        public ComputeBufferWrapperFloat3 ComputeAcceleration(ComputeBufferWrapperFloat Densities, ComputeBufferWrapperFloat3 PressureForces, int NBlocks = 0, ComputeBufferWrapperFloat3? Accelerations = null)
+        public ComputeBufferWrapperFloat3 ComputeAcceleration(ComputeBufferWrapperFloat Densities, ComputeBufferWrapperFloat3 PressureForces, float g, int NBlocks = 0, ComputeBufferWrapperFloat3? Accelerations = null)
         {
             if(NBlocks == 0)
             {
@@ -81,6 +83,7 @@ namespace SPH
             }
 
             _accelerationKernelInternal._nBodies.SetInt(Densities.dim);
+            _accelerationKernelInternal._g.SetFloat(g);
 
             _accelerationKernelInternal.Dispatch(NBlocks);
 

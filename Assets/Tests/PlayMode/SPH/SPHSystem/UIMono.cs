@@ -27,6 +27,9 @@ namespace SPH
         [SerializeField, Range(0, 10.0f)]
         float k = 10.0f;
 
+        [SerializeField, Range(0, 10.0f)]
+        float g = 0.0f;
+
         [SerializeField, Range(0, 1.0f)]
         float densityFactor = 1.0f;
 
@@ -143,7 +146,7 @@ namespace SPH
              sphMono.densityKernel.ComputeDensity(_CurrentPositions, hDensity, 0, _Densities);
              sphMono.pressureKernel.ComputePressure(_Densities, k, 1, 0, _Pressures);
              sphMono.pressureForceKernel.ComputePressureForce(_CurrentPositions, _Densities, _Pressures, hDensity, 0, _PressureForces);
-             sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, 0, _Accelerations);
+             sphMono.accelerationKernel.ComputeAcceleration(_Densities, _PressureForces, g, 0, _Accelerations);
 
             //Explicit-Euler
              sphMono.explicitEulerKernel.ComputeNext(_CurrentPositions, _CurrentVelocities, dt, 0, _NextPositions);

@@ -44,7 +44,7 @@ namespace SPH
 
 
         [Test]
-        public void OneParticle()
+        public void OneParticleZeroG()
         {
 
             Vector3[] pressureForces = { Vector3.forward };
@@ -52,7 +52,7 @@ namespace SPH
 
 
             Vector3[] accelerations = accelerationKernel.ComputeAcceleration(densities,
-                                                                             pressureForces);
+                                                                             pressureForces, 0.0f);
 
             Assert.AreEqual(1, accelerations.Length);
 
@@ -62,9 +62,27 @@ namespace SPH
 
         }
 
+        [Test]
+        public void OneParticle()
+        {
+
+            Vector3[] pressureForces = { Vector3.forward };
+            float[] densities = { 2000.0f };
+
+
+            Vector3[] accelerations = accelerationKernel.ComputeAcceleration(densities,
+                                                                             pressureForces, 10.0f);
+
+            Assert.AreEqual(1, accelerations.Length);
+
+            Assert.AreEqual(0.0f, accelerations[0][0], .001);
+            Assert.AreEqual(-10.0f, accelerations[0][1], .001);
+            Assert.AreEqual(1.0f / 2_000.0f, accelerations[0][2], .001); ;
+
+        }
 
         [Test]
-        public void OneParticleOneBlock()
+        public void OneParticleOneBlockZeroG()
         {
 
             Vector3[] pressureForces = { Vector3.forward };
@@ -73,7 +91,7 @@ namespace SPH
 
             Vector3[] accelerations = accelerationKernel.ComputeAcceleration(densities,
                                                                              pressureForces,
-                                                                             1);
+                                                                             0.0f, 1);
 
             Assert.AreEqual(1, accelerations.Length);
 

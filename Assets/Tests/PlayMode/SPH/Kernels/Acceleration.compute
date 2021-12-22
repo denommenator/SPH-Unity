@@ -10,6 +10,7 @@ RWStructuredBuffer<float3> _Accelerations;
 
 
 uint _nBodies;
+float _g;
 
 //kernel dispatch parameters
 uint3 grid_dim;
@@ -19,6 +20,7 @@ uint3 group_dim;
 [numthreads(NUM_THREADS, 1, 1)]
 void ComputeAcceleration(uint thread_id : SV_DispatchThreadID)
 {
+	float3 g_down = {0.0f, -_g, 0.0f};
 	//grid-stride loop over the particles p_id to compute each particle acceleration
 	// from the 3 forces, pressure force, viscocity force, surface tension force.
 	// 
@@ -27,6 +29,6 @@ void ComputeAcceleration(uint thread_id : SV_DispatchThreadID)
 		p_id += grid_dim.x * group_dim.x  //the grid size, no SV variable to tell you how many groups were launched!
 		)
 	{
-		_Accelerations[p_id] = (_PressureForces[p_id]) / _Densities[p_id];
+		_Accelerations[p_id] = (_PressureForces[p_id]) / _Densities[p_id] + g_down;
 	}
 }

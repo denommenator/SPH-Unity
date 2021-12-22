@@ -332,6 +332,7 @@ MonoBehaviour:
   containerHeight: 15
   containerWidth: 140
   containerDepth: 5
+  wall_elasticity: 1
   initialParticleHeight: 5
   hDensity: 2
   initialParticleSeparation: 1
@@ -356,6 +357,7 @@ MonoBehaviour:
   PressureForceShader: {fileID: 7200000, guid: e137f9488ff93c94ba62ced99b58cba6, type: 3}
   AccelerationShader: {fileID: 7200000, guid: 3d8b312353e9fa54398cbda98fb9c3dc, type: 3}
   ExplicitEulerShader: {fileID: 7200000, guid: b141ec1a0f9aac54392a186be34bdac2, type: 3}
+  CollisionsShader: {fileID: 7200000, guid: 1ad2dc5a860c44ab4a499fca3261111c, type: 3}
 --- !u!4 &1654668150
 Transform:
   m_ObjectHideFlags: 0
